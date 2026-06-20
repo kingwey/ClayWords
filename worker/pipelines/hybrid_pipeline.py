@@ -30,7 +30,7 @@ class HybridPipelineResult:
         self.thumbnail_url = thumbnail_url
         self.craft_check_result = craft_check_result
         self.estimated_volume = estimated_volume
-        self.estimated_weight = weight
+        self.estimated_weight = estimated_weight
         self.price = price
         self.estimated_days = estimated_days
 

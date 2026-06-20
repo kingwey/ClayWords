@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, Annotated
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Body
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -60,7 +60,7 @@ class SendMessageResponse(BaseModel):
 async def create_session(
     session: DbSession,
     current_user: UserInfo = Depends(get_current_user),
-    request: CreateSessionRequest = None
+    request: Optional[CreateSessionRequest] = Body(default=None),
 ):
     """Create a new session"""
     if request is None:
@@ -179,9 +179,15 @@ async def send_message(
     session_id: str,
     request: SendMessageRequest,
     session: DbSession,
-    current_user: UserInfo = Depends(get_current_user)
+    current_user: UserInfo = Depends(get_current_user),
+    demo: bool = False,
+    demo_offline: bool = False,
 ):
-    """Send a message and trigger design generation"""
+    """Send a message and trigger design generation.
+
+    - `?demo=true`：优先返回案例池中相似度最高的预生成方案，演示用。
+    - `?demo_offline=true`：完全离线，跳过 LLM，全部走 fixture。
+    """
     # Verify session belongs to user
     result = await session.execute(
         select(SessionModel)
@@ -211,10 +217,60 @@ async def send_message(
     if s.title == "新会话":
         s.title = request.content[:50]
 
-    # Parse design intent with LLM
+    # ============== 演示模式分支 ==============
+    if demo or demo_offline:
+        from app.services.demo import get_demo_service
+        demo_service = get_demo_service()
+        if not demo_service.enabled:
+            demo_service.enable(offline=demo_offline)
+
+        # 离线模式直接拿 mock 解析
+        if demo_offline:
+            params = await demo_service.mock_parse_design_params(request.content)
+            user_message.design_params = params
+            case = demo_service.find_similar_case(request.content)
+            name = case.name if case else "演示作品"
+            assistant_content = (
+                f"【演示模式 · 离线】已为您匹配预生成方案「{name}」。"
+            )
+        else:
+            # 在线演示：能调 LLM 就调，调不通退化到 mock
+            try:
+                from app.services.llm.parser import parse_design_params
+                dp = await parse_design_params(request.content)
+                user_message.design_params = {
+                    "shape": dp.shape,
+                    "glaze_color": dp.glaze_color,
+                    "size": dp.size,
+                    "style": dp.style,
+                    "emotion": dp.emotion,
+                    "material": dp.material,
+                    "usage": dp.usage,
+                }
+            except Exception:
+                user_message.design_params = await demo_service.mock_parse_design_params(
+                    request.content
+                )
+            case = demo_service.find_similar_case(request.content)
+            name = case.name if case else "演示作品"
+            assistant_content = (
+                f"【演示模式】从案例池命中相似设计「{name}」，正在为你装载…"
+            )
+
+        assistant_message = MessageModel(
+            id=str(uuid.uuid4()),
+            session_id=session_id,
+            role="assistant",
+            content=assistant_content,
+        )
+        session.add(assistant_message)
+        await session.flush()
+        return SendMessageResponse(task_id=task_id)
+
+    # ============== 正常分支：调 LLM 解析 ==============
     try:
         from app.services.llm.parser import parse_design_params, InputValidationError
-        
+
         try:
             design_params = await parse_design_params(request.content)
             assistant_content = f"好的，我理解您想要一个{design_params.shape}，" \

@@ -3,6 +3,7 @@
 from typing import Annotated, Optional
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -10,10 +11,11 @@ from sqlalchemy import select
 from app.db.session import get_session
 from app.models.entities import Order as OrderModel, OrderLog as OrderLogModel
 from app.services.order import (
-    OrderStatus, get_status_display_info, 
+    OrderStatus, get_status_display_info,
     update_order_status, cancel_order, pay_order, get_order_logs
 )
 from app.services.order.state_machine import is_terminal_status, get_status_timeline
+from app.services.workorder import generate_workorder_html, render_workorder_pdf
 from app.api.auth import get_current_user, UserInfo
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -109,6 +111,26 @@ async def list_orders(
         ],
         total=total
     )
+
+
+@router.get("/statuses")
+async def list_statuses():
+    """List all available order statuses.
+
+    路由顺序：必须在 `/{order_id}` 之前，否则会被参数化路由抢先匹配为 order_id="statuses"。
+    """
+    timeline = get_status_timeline()
+    return {
+        "statuses": [
+            {
+                "value": s.value,
+                "label": get_status_display_info(s)["label"],
+                "color": get_status_display_info(s)["color"],
+                "is_terminal": is_terminal_status(s)
+            }
+            for s in timeline
+        ]
+    }
 
 
 @router.get("/{order_id}", response_model=OrderDetailResponse)
@@ -252,18 +274,82 @@ async def cancel_order_endpoint(
     )
 
 
-@router.get("/statuses")
-async def list_statuses():
-    """List all available order statuses."""
-    timeline = get_status_timeline()
+def _build_workorder_dict(order: OrderModel, current_user: UserInfo) -> dict:
+    """组装工单 dict（PDF/HTML 通用）。"""
     return {
-        "statuses": [
-            {
-                "value": s.value,
-                "label": get_status_display_info(s)["label"],
-                "color": get_status_display_info(s)["color"],
-                "is_terminal": is_terminal_status(s)
-            }
-            for s in timeline
-        ]
+        "order_id": order.order_id,
+        "design_name": getattr(order, "design_name", None) or order.option_id[:8],
+        "studio_name": getattr(order, "studio_id", None) or "中央工作室",
+        "studio_master": "陶语 · 派单师傅",
+        "deadline": "约 7 - 10 天",
+        "glb_url": f"designs/{order.option_id}.glb",
+        "thumbnail_url": f"thumbnails/{order.option_id}.png",
+        "craft_check": {"passed": True, "auto_fixed": False, "issues": []},
+        "design_params": {
+            "shape": "vase",
+            "glaze_color": "celadon",
+            "size": "medium",
+            "material": "porcelain_white",
+        },
+        "price": order.total_price or 0,
+        "estimated_days": 9,
+        "material": "porcelain_white",
+        "dimensions_mm": {"height": 180, "width": 100, "depth": 100},
+        "ship_to": {
+            "name": current_user.username if current_user else "—",
+            "phone": "—",
+            "address": order.shipping_address or "—",
+        },
     }
+
+
+@router.get("/{order_id}/workorder.html")
+async def get_workorder_html(
+    order_id: str,
+    current_user: UserInfo = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """渲染工单 HTML（浏览器可直接打开打印）。"""
+    result = await session.execute(
+        select(OrderModel).where(
+            OrderModel.order_id == order_id,
+            OrderModel.user_id == current_user.user_id,
+        )
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    html = generate_workorder_html(_build_workorder_dict(order, current_user))
+    return Response(content=html, media_type="text/html; charset=utf-8")
+
+
+@router.get("/{order_id}/workorder.pdf")
+async def get_workorder_pdf(
+    order_id: str,
+    current_user: UserInfo = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """渲染工单 PDF；环境无 weasyprint 时退化为 HTML。"""
+    result = await session.execute(
+        select(OrderModel).where(
+            OrderModel.order_id == order_id,
+            OrderModel.user_id == current_user.user_id,
+        )
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    payload = render_workorder_pdf(_build_workorder_dict(order, current_user))
+    # 简单嗅探：PDF 以 %PDF- 开头
+    if payload.startswith(b"%PDF"):
+        return Response(
+            content=payload,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="workorder_{order_id}.pdf"'
+            },
+        )
+    # weasyprint 不可用，返回 HTML
+    return Response(content=payload, media_type="text/html; charset=utf-8")

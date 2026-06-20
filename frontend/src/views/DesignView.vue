@@ -302,6 +302,44 @@
           </div>
         </div>
 
+        <!-- P8.4.1 · 方案版本树 -->
+        <div class="version-tree" v-if="currentOption">
+          <button class="version-toggle" @click="showVersionTree = !showVersionTree">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+              <path d="M6 3v12M18 9v12M6 15a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3" />
+              <circle cx="6" cy="3" r="2"/>
+              <circle cx="18" cy="9" r="2"/>
+              <circle cx="18" cy="21" r="2"/>
+            </svg>
+            <span>版本树（{{ versions.length }}）</span>
+            <span class="toggle-arrow" :class="{ open: showVersionTree }">▾</span>
+          </button>
+          <transition name="vt-slide">
+            <div v-if="showVersionTree" class="version-list">
+              <div
+                v-for="v in versions.slice().reverse()"
+                :key="v.versionNo + '-' + v.createdAt"
+                class="version-node"
+                @click="rollbackToVersion(v)"
+              >
+                <div class="vn-dot" :style="{ background: v.colors.mid }"></div>
+                <div class="vn-line"></div>
+                <div class="vn-card">
+                  <div class="vn-head">
+                    <span class="vn-no">v{{ v.versionNo }}</span>
+                    <span class="vn-glaze">{{ v.glaze }}</span>
+                  </div>
+                  <div class="vn-label">{{ v.label }}</div>
+                  <div class="vn-meta">{{ new Date(v.createdAt).toLocaleTimeString() }} · 点击回滚</div>
+                </div>
+              </div>
+              <div v-if="versions.length === 0" class="vn-empty">
+                选中方案后开始记录版本…
+              </div>
+            </div>
+          </transition>
+        </div>
+
         <!-- 方案摘要 -->
         <div class="preview-summary" v-if="currentOption">
           <h4>工艺参数</h4>
@@ -354,6 +392,22 @@
 
     <!-- 工单弹窗 -->
     <WorkOrderPopup v-model="workorderVisible" :order-info="currentOrderInfo" />
+
+    <!-- P8.4.3 · 工作室接单 Toast -->
+    <transition name="accept-toast">
+      <div v-if="studioAccepted" class="studio-accept-toast" @click="studioAccepted = false">
+        <div class="accept-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+            <path d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div class="accept-body">
+          <div class="accept-title">师傅已接单</div>
+          <div class="accept-sub">{{ acceptedStudioName }} · 已开始排窑</div>
+        </div>
+        <div class="accept-pulse"></div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -414,6 +468,74 @@ const glazeOptions = [
   { name: '酱黄釉', bg: 'linear-gradient(135deg, #e8c98a 0%, #d4a574 60%, #8a6a3a 100%)' },
   { name: '玉青釉', bg: 'linear-gradient(135deg, #a8d4b8 0%, #5B8A72 60%, #2a5a48 100%)' },
 ]
+
+// P8.4.2 · 釉色 → 三阶调色板，用于 SVG / CSS 实时同步
+const glazePaletteMap: Record<string, OptionColors> = {
+  '冷白釉': { light: '#f5f0e8', mid: '#ece0d0', dark: '#b8a08a' },
+  '青瓷釉': { light: '#9ec6d0', mid: '#7B9BA8', dark: '#4a6e7a' },
+  '胭脂红': { light: '#e8a598', mid: '#c75b5b', dark: '#8a2a2a' },
+  '天目釉': { light: '#5a4a3a', mid: '#2d2926', dark: '#1a1513' },
+  '酱黄釉': { light: '#e8c98a', mid: '#d4a574', dark: '#8a6a3a' },
+  '玉青釉': { light: '#a8d4b8', mid: '#5B8A72', dark: '#2a5a48' },
+}
+
+// P8.4.1 · 方案版本树
+interface DesignVersion {
+  versionNo: number
+  label: string
+  glaze: string
+  colors: OptionColors
+  desc: string
+  tagsSnapshot: string[]
+  createdAt: number
+}
+const versions = ref<DesignVersion[]>([])
+const showVersionTree = ref(false)
+
+function pushVersion(label: string) {
+  const opt = currentOption.value
+  if (!opt) return
+  versions.value.push({
+    versionNo: versions.value.length + 1,
+    label,
+    glaze: opt.glaze,
+    colors: { ...opt.colors },
+    desc: opt.desc,
+    tagsSnapshot: [...opt.tags],
+    createdAt: Date.now(),
+  })
+}
+
+function rollbackToVersion(v: DesignVersion) {
+  const opt = currentOption.value
+  if (!opt) return
+  opt.glaze = v.glaze
+  opt.colors = { ...v.colors }
+  opt.desc = v.desc
+  opt.tags = [...v.tagsSnapshot]
+  currentGlaze.value = v.glaze
+  options.value = [...options.value]
+  // 在最末追加一条"回滚"记录
+  versions.value.push({
+    ...v,
+    versionNo: versions.value.length + 1,
+    label: `回滚到 v${v.versionNo}：${v.label}`,
+    createdAt: Date.now(),
+  })
+}
+
+// P8.4.3 · 工作室接单动画状态
+const studioAccepted = ref(false)
+const acceptedStudioName = ref('')
+
+function triggerStudioAccept() {
+  studioAccepted.value = false
+  // 派单后 2 秒触发"师傅已接单"
+  setTimeout(() => {
+    acceptedStudioName.value = topStudioName.value
+    studioAccepted.value = true
+  }, 2000)
+}
 
 const tweaks = [
   { text: '耳朵再长一点' },
@@ -501,9 +623,22 @@ function resetView() {
 }
 
 function changeGlaze(name: string) {
+  // P8.4.2 · 釉色实时切换 — 不重新生成 mesh，本地直接刷新
+  const prev = currentGlaze.value
   currentGlaze.value = name
   if (currentOption.value) {
     currentOption.value.glaze = name
+    // 同步颜色调色板，让 SVG / CSS 立即响应
+    const match = glazeOptions.find(g => g.name === name)
+    if (match) {
+      const palette = glazePaletteMap[name] || glazePaletteMap['冷白釉']
+      currentOption.value.colors = { ...palette }
+      // 触发响应式刷新
+      options.value = [...options.value]
+    }
+  }
+  if (prev !== name) {
+    pushVersion(`釉色：${prev} → ${name}`)
   }
 }
 
@@ -511,6 +646,18 @@ function selectOption(opt: Option) {
   selectedOptionId.value = opt.id
   showTweakPanel.value = true
   rotateY.value = 0
+  // P8.4.1 · 选中即建立 v1 基线（同 option 不重复）
+  if (versions.value.findIndex(v => v.label.includes(`基线 · ${opt.name}`)) === -1) {
+    versions.value.push({
+      versionNo: versions.value.length + 1,
+      label: `基线 · ${opt.name}`,
+      glaze: opt.glaze,
+      colors: { ...opt.colors },
+      desc: opt.desc,
+      tagsSnapshot: [...opt.tags],
+      createdAt: Date.now(),
+    })
+  }
 }
 
 function addAiMessage(content: string, withOptions?: Option[], withDispatch?: boolean) {
@@ -638,6 +785,8 @@ function applyTweak(text: string) {
       // 触发更新
       options.value = [...options.value]
       rotateY.value += 0.1
+      // P8.4.1 · 微调即记录新版本
+      pushVersion(`微调：${text}`)
     }
   }, 300)
 }
@@ -650,6 +799,8 @@ function openOrder(opt: Option) {
 function confirmOrder() {
   dispatchVisible.value = false
   workorderVisible.value = true
+  // P8.4.3 · 触发"师傅已接单"动画
+  triggerStudioAccept()
 }
 
 const currentOrderInfo = computed(() => {
@@ -1742,5 +1893,211 @@ watch(selectedOptionId, (id) => {
 .options-panel::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 3px;
+}
+
+/* ============================================================
+   P8.4.1 · 方案版本树
+   ============================================================ */
+.version-tree {
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--color-bg-warm);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+}
+.version-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  letter-spacing: 1px;
+}
+.version-toggle:hover { color: var(--color-accent); }
+.version-toggle .toggle-arrow {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  transition: transform var(--transition-fast);
+}
+.version-toggle .toggle-arrow.open { transform: rotate(180deg); }
+
+.version-list {
+  margin-top: var(--spacing-3);
+  padding-top: var(--spacing-2);
+  border-top: 1px dashed var(--color-border-light);
+  max-height: 280px;
+  overflow-y: auto;
+}
+.version-node {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) 0;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+.version-node:hover { transform: translateX(2px); }
+.version-node:hover .vn-card { border-color: var(--color-accent-light); }
+.vn-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-border);
+  margin-top: 8px;
+  z-index: 2;
+  position: relative;
+}
+.vn-line {
+  position: absolute;
+  left: 5px;
+  top: 18px;
+  bottom: -8px;
+  width: 1px;
+  background: var(--color-border);
+}
+.version-node:last-child .vn-line { display: none; }
+.vn-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: var(--font-size-xs);
+  transition: border-color var(--transition-fast);
+}
+.vn-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 2px;
+}
+.vn-no {
+  font-family: var(--font-family-mono);
+  color: var(--color-accent-dark);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.vn-glaze {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-display);
+  letter-spacing: 2px;
+}
+.vn-label {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  margin-bottom: 2px;
+}
+.vn-meta {
+  font-family: var(--font-family-mono);
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+.vn-empty {
+  text-align: center;
+  padding: var(--spacing-4);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-family-mono);
+}
+.vt-slide-enter-active,
+.vt-slide-leave-active {
+  transition: all var(--transition-normal);
+  overflow: hidden;
+}
+.vt-slide-enter-from,
+.vt-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+.vt-slide-enter-to,
+.vt-slide-leave-from {
+  opacity: 1;
+  max-height: 320px;
+}
+
+/* ============================================================
+   P8.4.3 · 工作室接单 Toast
+   ============================================================ */
+.studio-accept-toast {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px 16px 18px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  border-radius: var(--radius-xl);
+  color: #fff;
+  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(212, 165, 116, 0.4);
+  z-index: var(--z-toast);
+  cursor: pointer;
+  min-width: 280px;
+  overflow: hidden;
+}
+.accept-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-secondary);
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.accept-icon svg { width: 22px; height: 22px; }
+.accept-body { flex: 1; }
+.accept-title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  letter-spacing: 3px;
+  margin-bottom: 2px;
+}
+.accept-sub {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: rgba(245, 240, 232, 0.8);
+  letter-spacing: 1px;
+}
+.accept-pulse {
+  position: absolute;
+  inset: -2px;
+  border-radius: var(--radius-xl);
+  border: 2px solid rgba(212, 165, 116, 0.7);
+  animation: acceptPulse 1.6s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes acceptPulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  70% { transform: scale(1.04); opacity: 0; }
+  100% { transform: scale(1.04); opacity: 0; }
+}
+.accept-toast-enter-active {
+  animation: acceptIn 0.5s var(--easing-spring) both;
+}
+.accept-toast-leave-active {
+  animation: acceptIn 0.3s var(--easing-exit) reverse both;
+}
+@keyframes acceptIn {
+  0% {
+    opacity: 0;
+    transform: translateX(40px) translateY(10px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+  }
 }
 </style>

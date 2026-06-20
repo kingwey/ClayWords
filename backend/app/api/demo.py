@@ -81,3 +81,31 @@ async def mock_parse_params(user_input: str):
     service = get_demo_service()
     params = await service.mock_parse_design_params(user_input)
     return params
+
+
+# ============================================================
+#   P8.1.3 · 降级演示开关
+#   评委按下后下一次生成强制 B 路线失败 → 降级 A
+# ============================================================
+_DEGRADE_FLAG = {"on": False}
+
+
+@router.post("/degrade")
+async def trigger_degrade(on: bool = True):
+    """
+    模拟 GPU 故障：开启后，生成式路线 (B) 一律失败，强制降级到模板路线 (A)。
+
+    评委按下后立刻见效，前端会显示「GPU 路线降级」提示。
+    """
+    _DEGRADE_FLAG["on"] = bool(on)
+    return {"degrade": _DEGRADE_FLAG["on"]}
+
+
+@router.get("/degrade")
+async def get_degrade_status():
+    return {"degrade": _DEGRADE_FLAG["on"]}
+
+
+def is_degrade_on() -> bool:
+    """供 worker / pipeline 查询"""
+    return _DEGRADE_FLAG["on"]
