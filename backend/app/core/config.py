@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://claywords:claywords_secret@localhost:5432/claywords"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./test.db"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"

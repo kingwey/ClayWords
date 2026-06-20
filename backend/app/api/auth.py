@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.api.auth import router as base_router
 from app.models.entities import User
 from app.db.session import get_session
 from app.core.crypto import get_crypto
@@ -38,7 +37,6 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
-# Mock demo accounts for quick login
 DEMO_ACCOUNTS = {
     "13800000001": "user",
     "13800000002": "studio",
@@ -50,7 +48,6 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     session: AsyncSession = Depends(get_session)
 ) -> UserInfo:
-    """Get current authenticated user"""
     token = credentials.credentials
     payload = verify_token(token, "access")
     if not payload:
@@ -75,12 +72,11 @@ async def get_current_user(
     return UserInfo(
         user_id=user.user_id,
         phone=phone_decrypted[:3] + "****" + phone_decrypted[-4:],
-        role="user"  # Simplified
+        role="user"
     )
 
 
 def require_role(*roles: str):
-    """Dependency to require specific roles"""
     async def check_role(current_user: UserInfo = Depends(get_current_user)):
         if current_user.role not in roles:
             raise HTTPException(
@@ -96,8 +92,6 @@ async def login(
     request: LoginRequest,
     session: AsyncSession = Depends(get_session)
 ):
-    """Login with phone and verification code"""
-    # Mock verification - any 6-digit code is valid
     if len(request.code) != 6 or not request.code.isdigit():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -107,17 +101,14 @@ async def login(
     crypto = get_crypto()
     phone_hash = crypto.hash_phone(request.phone)
 
-    # Find user by phone hash
     result = await session.execute(select(User).where(User.phone_hash == phone_hash))
     user = result.scalar_one_or_none()
 
     if not user:
-        # For demo accounts that don't exist yet, create them
         if request.phone in DEMO_ACCOUNTS:
             user = User(
                 phone_hash=phone_hash,
-                phone_encrypted=crypto.encrypt(request.phone),
-                role=DEMO_ACCOUNTS[request.phone]
+                phone_encrypted=crypto.encrypt(request.phone)
             )
             session.add(user)
             await session.flush()
@@ -125,7 +116,6 @@ async def login(
     if user:
         user_id = user.user_id
     else:
-        # Fallback for demo
         user_id = f"user_{request.phone[-4:]}"
 
     access_token = create_access_token({"sub": user_id})
@@ -139,7 +129,6 @@ async def login(
 
 @router.post("/refresh", response_model=LoginResponse)
 async def refresh_token(request: RefreshRequest):
-    """Refresh access token"""
     payload = verify_token(request.refresh_token, "refresh")
     if not payload:
         raise HTTPException(
@@ -159,10 +148,4 @@ async def refresh_token(request: RefreshRequest):
 
 @router.get("/user", response_model=UserInfo)
 async def get_user(current_user: UserInfo = Depends(get_current_user)):
-    """Get current user info"""
     return current_user
-
-
-# Export base router for compatibility
-from app.api.auth import router as auth_router
-router.routes = auth_router.routes

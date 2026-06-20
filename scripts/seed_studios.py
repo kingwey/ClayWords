@@ -2,7 +2,12 @@
 
 import asyncio
 import sys
-sys.path.insert(0, 'backend')
+import os
+
+# Add backend to path and set working directory
+backend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'backend')
+sys.path.insert(0, backend_path)
+os.chdir(backend_path)
 
 from app.db.session import session_scope
 from app.models.entities import Studio

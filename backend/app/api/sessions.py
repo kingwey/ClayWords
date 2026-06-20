@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Annotated
 
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
@@ -16,6 +16,10 @@ from app.db.session import get_session
 
 
 router = APIRouter()
+
+
+# Type alias for dependency
+DbSession = Annotated[AsyncSession, Depends(get_session)]
 
 
 class SessionResponse(BaseModel):
@@ -54,11 +58,13 @@ class SendMessageResponse(BaseModel):
 
 @router.post("", response_model=SessionResponse)
 async def create_session(
-    request: CreateSessionRequest,
+    session: DbSession,
     current_user: UserInfo = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session)
+    request: CreateSessionRequest = None
 ):
     """Create a new session"""
+    if request is None:
+        request = CreateSessionRequest()
     new_session = SessionModel(
         session_id=str(uuid.uuid4()),
         user_id=current_user.user_id,
@@ -78,8 +84,8 @@ async def create_session(
 
 @router.get("", response_model=List[SessionResponse])
 async def list_sessions(
-    current_user: UserInfo = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session)
+    session: DbSession,
+    current_user: UserInfo = Depends(get_current_user)
 ):
     """List all sessions for current user"""
     result = await session.execute(
@@ -104,11 +110,11 @@ async def list_sessions(
 @router.get("/{session_id}", response_model=SessionResponse)
 async def get_session(
     session_id: str,
-    current_user: UserInfo = Depends(get_current_user),
-    db: AsyncSession = Depends(get_session)
+    session: DbSession,
+    current_user: UserInfo = Depends(get_current_user)
 ):
     """Get a specific session"""
-    result = await db.execute(
+    result = await session.execute(
         select(SessionModel)
         .where(
             SessionModel.session_id == session_id,
@@ -132,8 +138,8 @@ async def get_session(
 @router.get("/{session_id}/messages", response_model=List[MessageResponse])
 async def get_messages(
     session_id: str,
-    current_user: UserInfo = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session)
+    session: DbSession,
+    current_user: UserInfo = Depends(get_current_user)
 ):
     """Get messages for a session"""
     # Verify session belongs to user
@@ -172,8 +178,8 @@ async def get_messages(
 async def send_message(
     session_id: str,
     request: SendMessageRequest,
-    current_user: UserInfo = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session)
+    session: DbSession,
+    current_user: UserInfo = Depends(get_current_user)
 ):
     """Send a message and trigger design generation"""
     # Verify session belongs to user
@@ -187,6 +193,9 @@ async def send_message(
     s = result.scalar_one_or_none()
     if not s:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    # Generate task ID for tracking
+    task_id = str(uuid.uuid4())
 
     # Create user message
     user_message = MessageModel(
@@ -202,17 +211,37 @@ async def send_message(
     if s.title == "新会话":
         s.title = request.content[:50]
 
-    # Create assistant system message
+    # Parse design intent with LLM
+    try:
+        from app.services.llm.parser import parse_design_params, InputValidationError
+        
+        try:
+            design_params = await parse_design_params(request.content)
+            assistant_content = f"好的，我理解您想要一个{design_params.shape}，" \
+                              f"使用{design_params.glaze_color}，风格{design_params.style}。"
+            # Store design params in message
+            user_message.design_params = {
+                "shape": design_params.shape,
+                "glaze_color": design_params.glaze_color,
+                "size": design_params.size,
+                "style": design_params.style,
+                "emotion": design_params.emotion,
+                "material": design_params.material,
+                "usage": design_params.usage
+            }
+        except InputValidationError as e:
+            assistant_content = f"抱歉，{str(e)}"
+    except Exception:
+        assistant_content = "好的，我来为您设计这个方案。"
+
+    # Create assistant message
     assistant_message = MessageModel(
         id=str(uuid.uuid4()),
         session_id=session_id,
         role="assistant",
-        content="好的，我来为您设计这个方案。"
+        content=assistant_content
     )
     session.add(assistant_message)
-
-    # Generate task ID for 3D generation
-    task_id = str(uuid.uuid4())
 
     await session.flush()
 

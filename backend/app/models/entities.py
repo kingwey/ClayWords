@@ -1,9 +1,9 @@
-"""Database Models"""
+"""Database Models - SQLite Compatible"""
 
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Text, DateTime, ForeignKey, Index, Float, Integer, Boolean
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from sqlalchemy import String, Text, DateTime, ForeignKey, Index, Float, Integer
+from sqlalchemy import JSON as SQLAlchemyJSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import uuid
 
@@ -17,25 +17,11 @@ class User(Base):
 
     user_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     phone_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
-    phone_encrypted: Mapped[str] = mapped_column(Text, nullable=False)  # AES-256-GCM encrypted
+    phone_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
     sessions: Mapped[list["Session"]] = relationship(back_populates="user")
-    studio_users: Mapped[Optional["StudioUser"]] = relationship(back_populates="user")
-
-
-class StudioUser(Base):
-    __tablename__ = "studio_users"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.user_id"), nullable=False)
-    studio_id: Mapped[str] = mapped_column(String(36), ForeignKey("studios.studio_id"), nullable=False)
-    role: Mapped[str] = mapped_column(String(20), default="member")  # owner, manager, member
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    user: Mapped["User"] = relationship(back_populates="studio_users")
 
 
 class Studio(Base):
@@ -43,20 +29,18 @@ class Studio(Base):
 
     studio_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    location: Mapped[str] = mapped_column(String(50), nullable=False)  # 景德镇/德化/宜兴
-    specialties: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
-    capacity: Mapped[int] = mapped_column(Integer, default=10)  # 日产能
+    location: Mapped[str] = mapped_column(String(50), nullable=False)
+    specialties: Mapped[list] = mapped_column(SQLAlchemyJSON, default=list)
+    capacity: Mapped[int] = mapped_column(Integer, default=10)
     current_load: Mapped[int] = mapped_column(Integer, default=0)
     rating: Mapped[float] = mapped_column(Float, default=4.0)
     price_range_min: Mapped[float] = mapped_column(Float, default=0)
     price_range_max: Mapped[float] = mapped_column(Float, default=1000)
     estimated_days: Mapped[int] = mapped_column(Integer, default=7)
-    craft_overrides: Mapped[dict] = mapped_column(JSONB, default=dict)  # 工作室工艺校准数据
+    craft_overrides: Mapped[dict] = mapped_column(SQLAlchemyJSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
-    studio_users: Mapped[list["StudioUser"]] = relationship(back_populates="studio")
     orders: Mapped[list["Order"]] = relationship(back_populates="studio")
 
 
@@ -69,7 +53,6 @@ class Session(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
     user: Mapped["User"] = relationship(back_populates="sessions")
     messages: Mapped[list["SessionMessage"]] = relationship(back_populates="session", order_by="SessionMessage.created_at")
 
@@ -79,9 +62,9 @@ class SessionMessage(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     session_id: Mapped[str] = mapped_column(String(36), ForeignKey("sessions.session_id"), nullable=False)
-    role: Mapped[str] = mapped_column(String(20), nullable=False)  # user, assistant, system
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    design_params: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    design_params: Mapped[Optional[dict]] = mapped_column(SQLAlchemyJSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     session: Mapped["Session"] = relationship(back_populates="messages")
@@ -92,18 +75,13 @@ class DesignTemplate(Base):
 
     template_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    category: Mapped[str] = mapped_column(String(50), nullable=False)  # animal, landscape, vessel, abstract
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     glb_url: Mapped[str] = mapped_column(String(500), nullable=False)
     thumbnail_url: Mapped[str] = mapped_column(String(500), nullable=False)
-    embedding: Mapped[list[float]] = mapped_column(ARRAY(Float, dimensions=1536), nullable=True)
-    default_params: Mapped[dict] = mapped_column(JSONB, default=dict)
+    embedding: Mapped[Optional[list]] = mapped_column(SQLAlchemyJSON, nullable=True)
+    default_params: Mapped[dict] = mapped_column(SQLAlchemyJSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    __table_args__ = (
-        Index('idx_design_templates_embedding', embedding, postgresql_using='ivfflat',
-              postgresql_ops={'embedding': 'vector_cosine_ops'}),
-    )
 
 
 class Design(Base):
@@ -111,11 +89,10 @@ class Design(Base):
 
     design_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     session_id: Mapped[str] = mapped_column(String(36), ForeignKey("sessions.session_id"), nullable=False)
-    design_params: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    design_params: Mapped[dict] = mapped_column(SQLAlchemyJSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
     versions: Mapped[list["DesignVersion"]] = relationship(back_populates="design",
                                                              order_by="DesignVersion.version_no.desc()")
 
@@ -126,13 +103,13 @@ class DesignVersion(Base):
     version_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     design_id: Mapped[str] = mapped_column(String(36), ForeignKey("designs.design_id"), nullable=False)
     version_no: Mapped[int] = mapped_column(Integer, nullable=False)
-    option_no: Mapped[int] = mapped_column(Integer, nullable=False)  # 1, 2, or 3
-    pipeline: Mapped[str] = mapped_column(String(20), nullable=False)  # template, generative, hybrid
+    option_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    pipeline: Mapped[str] = mapped_column(String(20), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     glb_url: Mapped[str] = mapped_column(String(500), nullable=False)
     thumbnail_url: Mapped[str] = mapped_column(String(500), nullable=False)
-    craft_check_result: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    craft_check_result: Mapped[dict] = mapped_column(SQLAlchemyJSON, nullable=False)
     estimated_volume: Mapped[float] = mapped_column(Float, default=0)
     estimated_weight: Mapped[float] = mapped_column(Float, default=0)
     price: Mapped[float] = mapped_column(Float, default=0)
@@ -140,10 +117,6 @@ class DesignVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     design: Mapped["Design"] = relationship(back_populates="versions")
-
-    __table_args__ = (
-        Index('idx_design_versions_design_version', 'design_id', 'version_no'),
-    )
 
 
 class Order(Base):
@@ -155,7 +128,7 @@ class Order(Base):
     option_id: Mapped[str] = mapped_column(String(36), ForeignKey("design_versions.version_id"), nullable=False)
     studio_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("studios.studio_id"), nullable=True)
 
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")  # 12 states
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
     idempotency_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
 
     shipping_name: Mapped[str] = mapped_column(String(100), default="")
@@ -168,15 +141,8 @@ class Order(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
-    user: Mapped["User"] = relationship(back_populates=None)  # FK to users
-    session: Mapped["Session"] = relationship(back_populates=None)
     studio: Mapped[Optional["Studio"]] = relationship(back_populates="orders")
     logs: Mapped[list["OrderLog"]] = relationship(back_populates="order", order_by="OrderLog.created_at")
-
-    __table_args__ = (
-        Index('idx_orders_option_id', 'option_id', unique=True),
-    )
 
 
 class OrderLog(Base):
@@ -186,9 +152,9 @@ class OrderLog(Base):
     order_id: Mapped[str] = mapped_column(String(36), ForeignKey("orders.order_id"), nullable=False)
     from_status: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     to_status: Mapped[str] = mapped_column(String(30), nullable=False)
-    operator: Mapped[str] = mapped_column(String(50), default="system")  # system, user, studio
+    operator: Mapped[str] = mapped_column(String(50), default="system")
     reason: Mapped[str] = mapped_column(Text, default="")
-    metadata: Mapped[dict] = mapped_column(JSONB, default=dict)
+    extra_data: Mapped[dict] = mapped_column(SQLAlchemyJSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     order: Mapped["Order"] = relationship(back_populates="logs")

@@ -1,7 +1,7 @@
 """Redis Client for Caching and Streams"""
 
 import json
-from typing import Optional
+from typing import Optional, Union
 import redis.asyncio as redis
 from app.core.config import settings
 
@@ -11,13 +11,13 @@ class RedisClient:
         self._client: Optional[redis.Redis] = None
 
     async def connect(self):
-        self._client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        self._client = redis.from_url(settings.REDIS_URL, decode_responses=False)
 
     async def disconnect(self):
         if self._client:
             await self._client.close()
 
-    async def get(self, key: str) -> Optional[str]:
+    async def get(self, key: str) -> Optional[Union[str, bytes]]:
         return await self._client.get(key)
 
     async def set(self, key: str, value: str, ex: Optional[int] = None):
@@ -26,8 +26,11 @@ class RedisClient:
     async def delete(self, key: str):
         await self._client.delete(key)
 
-    async def publish(self, channel: str, message: dict):
-        await self._client.publish(channel, json.dumps(message))
+    async def publish(self, channel: str, message: str):
+        await self._client.publish(channel, message)
+
+    def pubsub(self):
+        return self._client.pubsub()
 
     async def xadd(self, stream: str, data: dict) -> str:
         return await self._client.xadd(stream, data)
@@ -43,3 +46,8 @@ class RedisClient:
 
 
 redis_client = RedisClient()
+
+
+async def get_redis() -> RedisClient:
+    """Get Redis client instance"""
+    return redis_client

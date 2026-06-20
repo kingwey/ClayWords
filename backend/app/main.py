@@ -7,8 +7,9 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, health, sessions
+from app.api import auth, health, sessions, sse, tasks, options, orders, demo
 from app.core.config import settings
+from app.db.session import init_db
 
 
 structlog.configure(
@@ -26,6 +27,8 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("application_startup", version=settings.VERSION)
+    await init_db()
+    logger.info("database_initialized")
     yield
     logger.info("application_shutdown")
 
@@ -64,3 +67,8 @@ app.include_router(health.router, tags=["health"])
 # API routes
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
+app.include_router(sse.router, prefix="/api/v1", tags=["sse"])
+app.include_router(tasks.router, prefix="/api/v1", tags=["tasks"])
+app.include_router(options.router, prefix="/api/v1", tags=["options"])
+app.include_router(orders.router, prefix="/api/v1", tags=["orders"])
+app.include_router(demo.router, prefix="/api/v1", tags=["demo"])

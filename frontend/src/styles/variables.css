@@ -1,65 +1,110 @@
-/* ClayWords Design Tokens - 陶语视觉系统 */
+/* ============================================================
+   ClayWords 陶语 · 视觉设计系统
+   参照设计文档：陶语-报名材料.html / 初赛演示技术方案
+   核心色：暖米瓷白背景 · 墨绿主色 · 陶土橙强调色 · 金箔点缀
+   ============================================================ */
 
 :root {
-  /* 釉色色板 - 6 色 */
-  --color-glaze-celadon: #7B9BA8;
-  --color-glaze-white: #F5F0E8;
-  --color-glaze-oxide-red: #C75B5B;
-  --color-glaze-tenmoku: #2D2926;
-  --color-glaze-jade: #5B8A72;
-  --color-glaze-nova: #D4A574;
+  /* ============================================================
+     语义色板 — Semantic Colors
+     ============================================================ */
+  --color-primary: #2d4a48;           /* 墨绿 · 品牌主色 */
+  --color-primary-dark: #1e3533;      /* 深墨绿 */
+  --color-primary-light: #5a8a88;     /* 浅墨绿 */
+  --color-accent: #c97b5a;            /* 陶土橙 · 强调色 */
+  --color-accent-dark: #a55d3f;       /* 深陶土 */
+  --color-accent-light: #e8c9b8;      /* 浅陶土 */
+  --color-secondary: #d4a574;         /* 金箔 · 点缀色 */
 
-  /* 语义色 */
-  --color-primary: var(--color-glaze-celadon);
-  --color-secondary: var(--color-glaze-nova);
-  --color-accent: var(--color-glaze-oxide-red);
-  --color-success: var(--color-glaze-jade);
-  --color-warning: var(--color-glaze-nova);
-  --color-error: var(--color-glaze-oxide-red);
+  /* 功能色 */
+  --color-success: #5b8a72;           /* 玉青 */
+  --color-warning: #d4a574;           /* 金箔 */
+  --color-error: #c75b5b;             /* 胭脂红 */
 
-  /* 文字色 */
-  --color-text-primary: #1A1A1A;
-  --color-text-secondary: #666666;
-  --color-text-tertiary: #999999;
-  --color-text-inverse: #FFFFFF;
+  /* 文字色（从深到浅的层次感） */
+  --color-text-primary: #2a2420;      /* 墨褐主文字 */
+  --color-text-secondary: #6b5e4f;    /* 深灰褐副文字 */
+  --color-text-tertiary: #a89a8a;     /* 浅灰褐备注 */
+  --color-text-muted: #b8ad9f;        /* 最浅文字 */
+  --color-text-inverse: #ffffff;      /* 反白 */
 
-  /* 背景色 */
-  --color-background: #FAFAF8;
-  --color-surface: #FFFFFF;
-  --color-surface-elevated: #FFFFFF;
+  /* 背景色 — 暖色陶瓷质感 */
+  --color-background: #faf6f0;        /* 米瓷主背景 */
+  --color-surface: #fffdf9;           /* 瓷白卡片 */
+  --color-bg2: #f3ebe0;               /* 暖米色 */
+  --color-bg-warm: #f5ede2;           /* 更暖色 */
 
-  /* 边框 */
-  --color-border: #E5E5E5;
-  --color-border-light: #F0F0F0;
+  /* 边框色 — 由深至浅 */
+  --color-border: #e5dccf;
+  --color-border-light: #eee7db;
+  --color-border-soft: #f5efe2;
 
-  /* 字体 */
-  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-family-display: 'Songti SC', 'SimSun', serif;
-  --font-family-mono: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  /* ============================================================
+     釉色六色 — 可选颜色系统
+     ============================================================ */
+  --glaze-white: #f5f0e8;             /* 瓷白 */
+  --glaze-celadon: #7b9ba8;           /* 青瓷 */
+  --glaze-jade: #5b8a72;              /* 玉青 */
+  --glaze-oxide-red: #c75b5b;         /* 胭脂红 */
+  --glaze-tenmoku: #2d2926;           /* 天目 */
+  --glaze-gold: #d4a574;              /* 金箔 */
 
-  /* 字号 */
+  /* ============================================================
+     字体系统
+     ============================================================ */
+  --font-family-base: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --font-family-display: "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif;
+  --font-family-mono: "SF Mono", "Monaco", "JetBrains Mono", "Consolas", monospace;
+
+  /* 字号（8级） */
   --font-size-xs: 12px;
-  --font-size-sm: 14px;
-  --font-size-base: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 20px;
-  --font-size-2xl: 24px;
-  --font-size-3xl: 30px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 15px;
+  --font-size-xl: 17px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 26px;
+  --font-size-4xl: 38px;
+  --font-size-5xl: 54px;
+  --font-size-6xl: 72px;
 
-  /* 圆角 */
+  /* 行距 */
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+  --line-height-loose: 1.9;
+
+  /* ============================================================
+     圆角系统 — 陶瓷般圆润
+     ============================================================ */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  --radius-full: 9999px;
+  --radius-2xl: 24px;
+  --radius-full: 999px;
 
-  /* 阴影 */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.12);
+  /* ============================================================
+     阴影系统 — 柔和、陶瓷哑光质感
+     ============================================================ */
+  --shadow-xs: 0 1px 2px rgba(42, 36, 32, 0.04);
+  --shadow-sm: 0 2px 6px rgba(42, 36, 32, 0.05);
+  --shadow-md: 0 4px 12px rgba(42, 36, 32, 0.06);
+  --shadow-lg: 0 8px 24px rgba(42, 36, 32, 0.08);
+  --shadow-xl: 0 16px 48px rgba(42, 36, 32, 0.10);
+  --shadow-2xl: 0 24px 60px rgba(42, 36, 32, 0.12);
 
-  /* 间距 */
+  /* 陶土色柔光 */
+  --shadow-warm: 0 4px 20px rgba(201, 123, 90, 0.15);
+  --shadow-warm-lg: 0 12px 40px rgba(201, 123, 90, 0.25);
+
+  /* 内阴影 */
+  --shadow-inner: inset 0 1px 2px rgba(42, 36, 32, 0.06);
+  --shadow-inner-warm: inset 0 0 0 1px rgba(201, 123, 90, 0.12);
+
+  /* ============================================================
+     间距系统（4的倍数）
+     ============================================================ */
   --spacing-1: 4px;
   --spacing-2: 8px;
   --spacing-3: 12px;
@@ -69,9 +114,212 @@
   --spacing-8: 32px;
   --spacing-10: 40px;
   --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-20: 80px;
 
-  /* 动效 */
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
-  --transition-slow: 350ms ease;
+  /* ============================================================
+     动效系统
+     ============================================================ */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-enter: cubic-bezier(0, 0, 0.2, 1);
+  --easing-exit: cubic-bezier(0.4, 0, 1, 1);
+  --easing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --transition-fast: var(--duration-fast) var(--easing-standard);
+  --transition-normal: var(--duration-normal) var(--easing-standard);
+  --transition-slow: var(--duration-slow) var(--easing-standard);
+
+  /* ============================================================
+     容器宽度
+     ============================================================ */
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1200px;
+  --container-2xl: 1440px;
+
+  /* ============================================================
+     Z-index 层级
+     ============================================================ */
+  --z-base: 1;
+  --z-overlay: 10;
+  --z-panel: 20;
+  --z-popover: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+}
+
+/* ============================================================
+   全局基础样式
+   ============================================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: var(--font-family-base);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-relaxed);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: var(--font-size-base);
+}
+
+/* 选中文字颜色 */
+::selection {
+  background: rgba(201, 123, 90, 0.25);
+  color: var(--color-primary);
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg2);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-fast);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-light);
+}
+
+/* ============================================================
+   通用工具类
+   ============================================================ */
+.text-display {
+  font-family: var(--font-family-display);
+  letter-spacing: 0.05em;
+}
+
+.text-mono {
+  font-family: var(--font-family-mono);
+  letter-spacing: 0.03em;
+}
+
+.shadow-warm {
+  box-shadow: var(--shadow-warm);
+}
+
+/* 通用容器 */
+.container {
+  width: 100%;
+  max-width: var(--container-xl);
+  margin: 0 auto;
+  padding: 0 var(--spacing-8);
+}
+
+/* 段落 */
+p {
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-primary);
+}
+
+/* 链接基础样式 */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+a:hover {
+  color: var(--color-accent);
+}
+
+/* ============================================================
+   通用动画关键帧
+   ============================================================ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.92); }
+}
+
+@keyframes glazeFlow {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes slowSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slowRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes stampIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2) rotate(-15deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.9) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
 }
