@@ -160,7 +160,7 @@
                   <!-- 瓶口 -->
                   <ellipse cx="150" cy="82" rx="24" ry="6" fill="#fffdf9" stroke="rgba(42,36,32,0.2)" stroke-width="1" />
                   <!-- 高光 -->
-                  <ellipse cx="125" cy="200" rx="10" ry="80" fill="url(#hl-{{ opt.id }})" />
+                  <ellipse cx="125" cy="200" rx="10" ry="80" :fill="`url(#hl-${opt.id})`" />
                   <!-- 装饰线 -->
                   <path d="M 120 280 Q 150 285 180 280" fill="none" stroke="rgba(45,74,72,0.25)" stroke-width="1.5" />
                 </g>
@@ -182,7 +182,7 @@
                     :fill="`url(#body-${opt.id})`" stroke="rgba(42,36,32,0.15)" stroke-width="1"
                   />
                   <ellipse cx="150" cy="92" rx="22" ry="5" fill="#fffdf9" stroke="rgba(42,36,32,0.2)" stroke-width="1" />
-                  <ellipse cx="130" cy="220" rx="8" ry="60" fill="url(#hl-{{ opt.id }})" />
+                  <ellipse cx="130" cy="220" rx="8" ry="60" :fill="`url(#hl-${opt.id})`" />
                 </g>
               </svg>
               <div v-else class="option-skeleton">
@@ -837,8 +837,11 @@ onMounted(() => {
     }
   }, 50)
 
-  // 3 秒后给出示例方案
+  // 3 秒后给出示例方案：自动注入 prompt 触发演示流
   setTimeout(() => {
+    if (!inputText.value.trim()) {
+      inputText.value = '送给妈妈的生日礼物，她属兔，喜欢月亮和桂花，希望是冷白釉，放玄关'
+    }
     sendUserMessage()
   }, 1500)
 

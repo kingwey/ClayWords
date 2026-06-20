@@ -115,10 +115,42 @@ watch(visible, (val) => {
 })
 
 function handleViewPDF() {
-  if (props.orderInfo.pdfUrl) {
-    emit('viewPDF', props.orderInfo.pdfUrl)
-    window.open(props.orderInfo.pdfUrl, '_blank')
-  }
+  // 优先用外部传入的 pdfUrl；否则按 orderId 兜底打开后端 HTML 工单
+  const url = props.orderInfo.pdfUrl
+    || `/api/v1/orders/${props.orderInfo.orderId}/workorder.html`
+  emit('viewPDF', url)
+
+  // 带 token 直接 open 会丢 Authorization；这里用 fetch 取回 blob 再开新窗口
+  const token = localStorage.getItem('access_token') || ''
+  fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    .then(r => {
+      if (!r.ok) throw new Error(String(r.status))
+      return r.blob()
+    })
+    .then(blob => {
+      const objectUrl = URL.createObjectURL(blob)
+      window.open(objectUrl, '_blank')
+    })
+    .catch(() => {
+      // 演示兜底：弹一个静态预览页
+      const html = `<html><head><meta charset="utf-8"><title>陶语工单</title>
+<style>body{font-family:"Songti SC",serif;background:#faf6f0;color:#2a2420;padding:60px;line-height:1.8}
+h1{color:#2d4a48;letter-spacing:4px;border-bottom:2px solid #2d4a48;padding-bottom:12px}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:8px 16px;margin-top:24px}
+.k{color:#8a7d6f}.v{font-weight:600}
+.seal{margin-top:48px;width:120px;height:120px;border:3px solid #c75b5b;border-radius:50%;display:flex;
+align-items:center;justify-content:center;color:#c75b5b;font-size:18px;letter-spacing:6px;transform:rotate(-12deg)}</style>
+</head><body><h1>陶语工单 · ${props.orderInfo.orderId.slice(0, 8)}</h1>
+<div class="kv">
+<div class="k">承制工作室</div><div class="v">${props.orderInfo.studioName}</div>
+<div class="k">作品名称</div><div class="v">${props.orderInfo.productName}</div>
+<div class="k">制作工期</div><div class="v">${props.orderInfo.leadTime} 天</div>
+<div class="k">预计送达</div><div class="v">${props.orderInfo.deliveryDate}</div>
+<div class="k">工艺参数</div><div class="v">${props.orderInfo.params.join(' · ')}</div>
+</div><div class="seal">陶语已派</div></body></html>`
+      const w = window.open('', '_blank')
+      if (w) { w.document.write(html); w.document.close() }
+    })
 }
 
 function handleClose() {

@@ -134,7 +134,10 @@ async function handleLogin() {
   }
   loading.value = true
   try {
-    await axios.post('/api/v1/auth/login', { phone: phone.value, code: code.value })
+    const { data } = await axios.post('/api/v1/auth/login', { phone: phone.value, code: code.value })
+    // 保存 JWT，下游所有鉴权接口都依赖这两条
+    localStorage.setItem('access_token', data.access_token)
+    localStorage.setItem('refresh_token', data.refresh_token)
     ElMessage.success('登录成功')
     router.push('/design')
   } catch {
@@ -154,7 +157,9 @@ async function quickLogin(type: string) {
     }
     phone.value = phoneMap[type]
     code.value = '123456'
-    await axios.post('/api/v1/auth/login', { phone: phone.value, code: code.value })
+    const { data } = await axios.post('/api/v1/auth/login', { phone: phone.value, code: code.value })
+    localStorage.setItem('access_token', data.access_token)
+    localStorage.setItem('refresh_token', data.refresh_token)
     ElMessage.success('登录成功')
     router.push('/design')
   } catch {

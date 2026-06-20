@@ -81,9 +81,9 @@ async def list_orders(
     if status_filter:
         query = query.where(OrderModel.status == status_filter)
     
-    # Get total count
+    # Get total count（PK 字段名是 order_id，不是 id）
     count_result = await session.execute(
-        select(OrderModel.id).where(OrderModel.user_id == current_user.user_id)
+        select(OrderModel.order_id).where(OrderModel.user_id == current_user.user_id)
     )
     total = len(count_result.scalars().all())
     
@@ -296,8 +296,8 @@ def _build_workorder_dict(order: OrderModel, current_user: UserInfo) -> dict:
         "material": "porcelain_white",
         "dimensions_mm": {"height": 180, "width": 100, "depth": 100},
         "ship_to": {
-            "name": current_user.username if current_user else "—",
-            "phone": "—",
+            "name": (current_user.phone if current_user else "—"),
+            "phone": current_user.phone if current_user else "—",
             "address": order.shipping_address or "—",
         },
     }

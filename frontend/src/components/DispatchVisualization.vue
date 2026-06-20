@@ -84,11 +84,12 @@ const emit = defineEmits<{
   (e: 'select', studio: Studio): void
 }>()
 
+// 4 个维度色直接走陶语 token：陶土橙 / 青瓷 / 玉青 / 金箔
 const dimensions: Dimension[] = [
-  { key: 'craft', label: '工艺', color: '#c97b5a' },
-  { key: 'capacity', label: '产能', color: '#7B9BA8' },
-  { key: 'geo', label: '距离', color: '#5B8A72' },
-  { key: 'rating', label: '评分', color: '#D4A574' }
+  { key: 'craft',    label: '工艺', color: 'var(--color-accent)' },
+  { key: 'capacity', label: '产能', color: 'var(--glaze-celadon)' },
+  { key: 'geo',      label: '距离', color: 'var(--glaze-jade)' },
+  { key: 'rating',   label: '评分', color: 'var(--color-secondary)' }
 ]
 
 const animated = ref(false)
@@ -207,7 +208,7 @@ defineExpose({
 }
 
 .studio-card.winner {
-  border-color: #D4A574;
+  border-color: var(--color-secondary);
   background: linear-gradient(135deg, rgba(212, 165, 116, 0.08) 0%, rgba(212, 165, 116, 0.02) 100%);
 }
 
@@ -227,7 +228,7 @@ defineExpose({
 .winner-badge {
   font-size: var(--font-size-xs);
   padding: 2px 8px;
-  background: linear-gradient(135deg, #D4A574 0%, #c97b5a 100%);
+  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-accent) 100%);
   color: white;
   border-radius: var(--radius-full);
   font-weight: 600;
@@ -296,7 +297,7 @@ defineExpose({
 }
 
 .total-value.gold {
-  background: linear-gradient(135deg, #D4A574 0%, #c97b5a 100%);
+  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -323,9 +324,9 @@ defineExpose({
   justify-content: center;
   font-size: 40px;
   font-weight: 900;
-  color: #a55d3f;
+  color: var(--color-accent-dark);
   background: linear-gradient(135deg, rgba(201, 123, 90, 0.15) 0%, rgba(201, 123, 90, 0.05) 100%);
-  border: 3px solid #c97b5a;
+  border: 3px solid var(--color-accent);
   border-radius: 50%;
   margin-bottom: var(--spacing-4);
   animation: seal-stamp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);

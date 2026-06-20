@@ -198,26 +198,27 @@ const currentOrder = ref<OrderDetail | null>(null)
 const cancelingOrderId = ref('')
 const cancelReason = ref('')
 
+// 走陶语色板：墨绿主推进 / 陶土橙制作 / 玉青完成 / 金箔预警 / 胭脂红错
 const statusColors: Record<string, string> = {
-  pending: '#909399',
-  confirmed: '#409EFF',
-  dispatched: '#67C23A',
-  producing: '#E6A23C',
-  glazing: '#E6A23C',
-  firing: '#F56C6C',
-  cooling: '#909399',
-  qc: '#E6A23C',
-  completed: '#67C23A',
-  shipping_pending: '#409EFF',
-  shipped: '#409EFF',
-  delivered: '#67C23A',
-  cancelled: '#909399',
-  refunding: '#E6A23C',
-  refunded: '#909399'
+  pending:          'var(--color-text-tertiary)',
+  confirmed:        'var(--color-primary)',
+  dispatched:       'var(--color-primary-light)',
+  producing:        'var(--color-accent)',
+  glazing:          'var(--color-accent)',
+  firing:           'var(--color-accent-dark)',
+  cooling:          'var(--color-text-secondary)',
+  qc:               'var(--color-warning)',
+  completed:        'var(--color-success)',
+  shipping_pending: 'var(--color-primary-light)',
+  shipped:          'var(--color-primary)',
+  delivered:        'var(--color-success)',
+  cancelled:        'var(--color-text-tertiary)',
+  refunding:        'var(--color-warning)',
+  refunded:         'var(--color-text-tertiary)'
 }
 
 function getStatusColor(status: string): string {
-  return statusColors[status] || '#909399'
+  return statusColors[status] || 'var(--color-text-tertiary)'
 }
 
 function canCancel(status: string): boolean {
