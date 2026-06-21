@@ -1,77 +1,171 @@
-"""Tasks API for Design Generation Tasks"""
+"""Tasks API - Redis Streams + Pub/Sub powered"""
 
-import uuid
 import json
 import asyncio
-from datetime import datetime
-from typing import Dict, Optional, List
-from fastapi import APIRouter, HTTPException, Depends, status, Query
+from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Depends, status, Query, Header
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from app.api.auth import get_current_user, UserInfo
 from app.api.sse import validate_ticket
-from app.db.session import get_session
-from app.models.entities import Session as SessionModel, Design as DesignModel, DesignVersion as DesignVersionModel
+from app.core.redis import RedisClient, get_redis
+from app.services.tasks.task_service import (
+    TaskService,
+    get_task_service,
+    TASK_STATE_COMPLETED,
+    TASK_STATE_FAILED,
+)
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
-
-# In-memory task store (use Redis in production)
-_task_status: Dict[str, str] = {}
-_task_options: Dict[str, List[str]] = {}
-_task_events: Dict[str, asyncio.Queue] = {}
 
 
 class TaskStatusResponse(BaseModel):
     task_id: str
     status: str  # pending, processing, completed, failed
-    options: Optional[List[str]] = None
+    progress: int = 0
+    options: Optional[List[dict]] = None
+    result_uri: Optional[str] = None
     error: Optional[str] = None
+
+
+@router.get("/{task_id}", response_model=TaskStatusResponse)
+async def get_task_status(
+    task_id: str,
+    current_user: UserInfo = Depends(get_current_user),
+    task_service: TaskService = Depends(get_task_service),
+):
+    """Get task status (used as fallback for disconnected clients).
+
+    Reads from Redis cache first, falls back to PostgreSQL.
+    """
+    task = await task_service.get_task(task_id)
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        )
+
+    response = TaskStatusResponse(
+        task_id=task.task_id,
+        status=task.state,
+        progress=task.progress,
+        result_uri=task.result_uri,
+    )
+
+    if task.state == TASK_STATE_FAILED and task.error_message:
+        response.error = task.error_message
+
+    return response
 
 
 @router.get("/{task_id}/events")
 async def stream_task_events(
     task_id: str,
     ticket: str = Query(...),
-    current_user: UserInfo = Depends(get_current_user)
+    last_event_id: Optional[str] = Header(None, alias="Last-Event-ID"),
+    current_user: UserInfo = Depends(get_current_user),
+    redis: RedisClient = Depends(get_redis),
+    task_service: TaskService = Depends(get_task_service),
 ):
-    """Stream SSE events for a task using ticket authentication"""
+    """Stream SSE events for a task using Redis Pub/Sub.
+
+    Features:
+    - Ticket-based authentication (one-time use)
+    - Last-Event-ID support for reconnection (replays missed events from Redis Stream)
+    - Real-time updates via Redis Pub/Sub
+    """
     # Validate ticket
-    ticket_user_id = await validate_ticket(ticket)
+    ticket_user_id = await validate_ticket(ticket, redis)
     if ticket_user_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Ticket does not match current user"
+            detail="Ticket does not match current user",
         )
 
-    # Create event queue for this task if not exists
-    if task_id not in _task_events:
-        _task_events[task_id] = asyncio.Queue()
-
     async def event_generator():
-        queue = _task_events[task_id]
-        timeout_count = 0
-        max_timeouts = 30  # 30 seconds timeout
-        
         # Send initial connection event
         yield f"event: connected\ndata: {json.dumps({'task_id': task_id})}\n\n"
-        
-        while timeout_count < max_timeouts:
+
+        # 1. Replay history if Last-Event-ID provided
+        if last_event_id:
             try:
-                event = await asyncio.wait_for(queue.get(), timeout=1.0)
-                yield f"event: {event['type']}\ndata: {json.dumps(event['data'])}\n\n"
-                
-                if event['type'] in ('done', 'error'):
-                    break
-            except asyncio.TimeoutError:
-                timeout_count += 1
-                # Send keepalive
-                yield f": keepalive\n\n"
-        
-        yield f"event: done\ndata: {json.dumps({'status': 'completed'})}\n\n"
+                # Range start should be after last_event_id
+                history = await task_service.get_event_history(
+                    task_id,
+                    last_event_id=f"({last_event_id}",  # exclusive range start
+                )
+                for event in history:
+                    yield (
+                        f"id: {event['id']}\n"
+                        f"event: {event['type']}\n"
+                        f"data: {json.dumps(event['data'])}\n\n"
+                    )
+            except Exception:
+                # Fallback: send all history
+                history = await task_service.get_event_history(task_id)
+                for event in history:
+                    yield (
+                        f"id: {event['id']}\n"
+                        f"event: {event['type']}\n"
+                        f"data: {json.dumps(event['data'])}\n\n"
+                    )
+
+        # 2. Subscribe to live events via Pub/Sub
+        pubsub = redis.pubsub()
+        await pubsub.psubscribe(f"task:{task_id}:*")
+
+        try:
+            timeout_count = 0
+            max_timeouts = 600  # 10 minutes
+
+            while timeout_count < max_timeouts:
+                try:
+                    message = await asyncio.wait_for(
+                        pubsub.get_message(ignore_subscribe_messages=True),
+                        timeout=1.0,
+                    )
+
+                    if message is None:
+                        timeout_count += 1
+                        # Send keepalive every second
+                        yield ": keepalive\n\n"
+                        continue
+
+                    if message["type"] == "pmessage":
+                        timeout_count = 0
+                        channel = message["channel"]
+                        data_str = message["data"]
+
+                        # Parse channel: task:<id>:<event_type>
+                        event_type = channel.rsplit(":", 1)[-1]
+
+                        try:
+                            event_data = json.loads(data_str)
+                            payload = event_data.get("data", {})
+
+                            yield (
+                                f"event: {event_type}\n"
+                                f"data: {json.dumps(payload)}\n\n"
+                            )
+
+                            # Stop on terminal events
+                            if event_type in ("done", "error"):
+                                break
+                        except json.JSONDecodeError:
+                            yield f"event: {event_type}\ndata: {data_str}\n\n"
+
+                except asyncio.TimeoutError:
+                    timeout_count += 1
+                    yield ": keepalive\n\n"
+
+        finally:
+            await pubsub.punsubscribe(f"task:{task_id}:*")
+            await pubsub.close()
+
+        yield f"event: close\ndata: {json.dumps({'reason': 'stream_closed'})}\n\n"
 
     return StreamingResponse(
         event_generator(),
@@ -79,44 +173,38 @@ async def stream_task_events(
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
-@router.get("/{task_id}", response_model=TaskStatusResponse)
-async def get_task_status(
-    task_id: str,
-    current_user: UserInfo = Depends(get_current_user)
-):
-    """Get final task status (fallback for disconnected clients)"""
-    status_str = _task_status.get(task_id, "pending")
-    
-    result = TaskStatusResponse(
-        task_id=task_id,
-        status=status_str
-    )
-    
-    if status_str == "completed":
-        result.options = _task_options.get(task_id)
-    elif status_str == "failed":
-        result.error = "Task processing failed"
-    
-    return result
+# ============== Compatibility helpers ==============
 
-
-# Utility functions for publishing task events
 async def publish_task_event(task_id: str, event_type: str, data: dict):
-    """Publish an event to a task's queue"""
-    if task_id in _task_events:
-        event = {"type": event_type, "data": data, "timestamp": datetime.utcnow().isoformat()}
-        await _task_events[task_id].put(event)
+    """Publish an event (compatibility wrapper).
+
+    Replaces the legacy in-memory queue mechanism.
+    """
+    task_service = await get_task_service()
+    await task_service.publish_progress(task_id, event_type, data)
 
 
-async def set_task_status(task_id: str, status: str, options: Optional[List[str]] = None, error: Optional[str] = None):
-    """Set task status"""
-    _task_status[task_id] = status
+async def set_task_status(
+    task_id: str,
+    status: str,
+    options: Optional[List] = None,
+    error: Optional[str] = None,
+):
+    """Set task status (compatibility wrapper)."""
+    task_service = await get_task_service()
+    result_uri = None
     if options:
-        _task_options[task_id] = options
+        result_uri = json.dumps(options)
+    await task_service.update_task_state(
+        task_id,
+        status,
+        result_uri=result_uri,
+        error_message=error,
+    )
     if error:
-        await publish_task_event(task_id, "error", {"error": error})
+        await task_service.publish_progress(task_id, "error", {"error": error})

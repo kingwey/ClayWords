@@ -13,3 +13,4 @@ passlib[bcrypt]>=1.7.0
 python-multipart>=0.0.9
 httpx>=0.27.0
 boto3>=1.34.0
+minio>=7.2.0
