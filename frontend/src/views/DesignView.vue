@@ -412,9 +412,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import DispatchVisualization from '../components/DispatchVisualization.vue'
 import WorkOrderPopup from '../components/WorkOrderPopup.vue'
+import { usePreviewRotation } from '@/composables/usePreviewRotation'
+import { useDesignVersions } from '@/composables/useDesignVersions'
 
 interface Message {
   role: 'user' | 'ai'
@@ -453,9 +455,9 @@ const options = ref<Option[]>([])
 const selectedOptionId = ref<string | null>(null)
 const showTweakPanel = ref(false)
 const currentGlaze = ref('冷白釉')
-const rotateY = ref(0)
-const rotateX = ref(-8)
-const autoRotate = ref(true)
+// 3D 预览的旋转/拖拽/auto-rotate 已抽到 composable
+const preview = usePreviewRotation()
+const { rotateX, rotateY, autoRotate } = preview
 const dispatchVisible = ref(false)
 const workorderVisible = ref(false)
 const dispatchRef = ref<any>(null)
@@ -479,50 +481,7 @@ const glazePaletteMap: Record<string, OptionColors> = {
   '玉青釉': { light: '#a8d4b8', mid: '#5B8A72', dark: '#2a5a48' },
 }
 
-// P8.4.1 · 方案版本树
-interface DesignVersion {
-  versionNo: number
-  label: string
-  glaze: string
-  colors: OptionColors
-  desc: string
-  tagsSnapshot: string[]
-  createdAt: number
-}
-const versions = ref<DesignVersion[]>([])
-const showVersionTree = ref(false)
-
-function pushVersion(label: string) {
-  const opt = currentOption.value
-  if (!opt) return
-  versions.value.push({
-    versionNo: versions.value.length + 1,
-    label,
-    glaze: opt.glaze,
-    colors: { ...opt.colors },
-    desc: opt.desc,
-    tagsSnapshot: [...opt.tags],
-    createdAt: Date.now(),
-  })
-}
-
-function rollbackToVersion(v: DesignVersion) {
-  const opt = currentOption.value
-  if (!opt) return
-  opt.glaze = v.glaze
-  opt.colors = { ...v.colors }
-  opt.desc = v.desc
-  opt.tags = [...v.tagsSnapshot]
-  currentGlaze.value = v.glaze
-  options.value = [...options.value]
-  // 在最末追加一条"回滚"记录
-  versions.value.push({
-    ...v,
-    versionNo: versions.value.length + 1,
-    label: `回滚到 v${v.versionNo}：${v.label}`,
-    createdAt: Date.now(),
-  })
-}
+// P8.4.1 · 方案版本树占位：实际初始化下移到 currentOption 声明之后
 
 // P8.4.3 · 工作室接单动画状态
 const studioAccepted = ref(false)
@@ -582,6 +541,14 @@ const topStudioName = computed(() => {
 
 const currentOption = computed(() => options.value.find(o => o.id === selectedOptionId.value) || null)
 
+// P8.4.1 · 方案版本树（抽到 composable，与 currentOption 解耦后管理）
+const { versions, showVersionTree, pushVersion, rollbackToVersion } =
+  useDesignVersions(currentOption as any, (v) => {
+    // 回滚后同步全局 currentGlaze + 强制响应式刷新
+    currentGlaze.value = v.glaze
+    options.value = [...options.value]
+  })
+
 const craftParams = computed(() => {
   if (!currentOption.value) return {}
   return {
@@ -611,16 +578,9 @@ const ceramicBodyStyle = computed(() => {
   return `${shape} background: ${glaze.bg};`
 })
 
-let rotateTimer: any = null
-
-function toggleAutoRotate() {
-  autoRotate.value = !autoRotate.value
-}
-
-function resetView() {
-  rotateY.value = 0
-  rotateX.value = -8
-}
+// 旋转控制与拖拽逻辑已收敛到 preview composable，这里仅暴露给模板使用
+const toggleAutoRotate = preview.toggleAutoRotate
+const resetView = preview.resetView
 
 function changeGlaze(name: string) {
   // P8.4.2 · 釉色实时切换 — 不重新生成 mesh，本地直接刷新
@@ -830,13 +790,6 @@ onMounted(() => {
     把你想要的陶瓷用自然语言描述给我，我帮你生成可直接下单烧制的方案。<br/>
     <em style="color:#8a7d6f;font-size:12px;">试试：送给妈妈的生日礼物，她属兔，喜欢月亮和桂花…</em>`)
 
-  // 旋转动画
-  rotateTimer = setInterval(() => {
-    if (autoRotate.value) {
-      rotateY.value += 0.8
-    }
-  }, 50)
-
   // 3 秒后给出示例方案：自动注入 prompt 触发演示流
   setTimeout(() => {
     if (!inputText.value.trim()) {
@@ -845,42 +798,11 @@ onMounted(() => {
     sendUserMessage()
   }, 1500)
 
-  // mouse drag to rotate
-  stageRef.value?.addEventListener('mousedown', onStageMouseDown)
+  // 拖拽旋转：交给 composable 接管（自动管理 mousedown/move/up + 卸载清理）
+  preview.bindStage(stageRef.value)
 })
 
-onUnmounted(() => {
-  if (rotateTimer) clearInterval(rotateTimer)
-})
-
-let dragging = false
-let lastX = 0
-let lastY = 0
-
-function onStageMouseDown(e: MouseEvent) {
-  dragging = true
-  autoRotate.value = false
-  lastX = e.clientX
-  lastY = e.clientY
-  window.addEventListener('mousemove', onStageMouseMove)
-  window.addEventListener('mouseup', onStageMouseUp)
-}
-
-function onStageMouseMove(e: MouseEvent) {
-  if (!dragging) return
-  const dx = e.clientX - lastX
-  const dy = e.clientY - lastY
-  rotateY.value += dx * 0.5
-  rotateX.value = Math.max(-25, Math.min(25, rotateX.value - dy * 0.3))
-  lastX = e.clientX
-  lastY = e.clientY
-}
-
-function onStageMouseUp() {
-  dragging = false
-  window.removeEventListener('mousemove', onStageMouseMove)
-  window.removeEventListener('mouseup', onStageMouseUp)
-}
+// onUnmounted 内的 rotateTimer 清理也由 composable 自动管理
 
 watch(selectedOptionId, (id) => {
   if (id) {
