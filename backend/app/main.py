@@ -7,10 +7,12 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, health, sessions, sse, tasks, options, orders, demo, uploads, studio_onboarding, studio_orders, payments, logistics
+from app.api import auth, health, sessions, sse, tasks, options, orders, demo, uploads, studio_onboarding, studio_orders, payments, logistics, metrics, alerts
 from app.core.config import settings
 from app.core.redis import redis_client
 from app.core.storage import minio_client
+from app.core.logging_middleware import LoggingMiddleware
+from app.core.metrics import PrometheusMiddleware
 from app.db.session import init_db
 
 
@@ -33,8 +35,11 @@ async def lifespan(app: FastAPI):
     logger.info("database_initialized")
     await redis_client.connect()
     logger.info("redis_connected", url=settings.REDIS_URL)
-    minio_client.connect()
-    logger.info("minio_connected", endpoint=settings.MINIO_ENDPOINT)
+    try:
+        minio_client.connect()
+        logger.info("minio_connected", endpoint=settings.MINIO_ENDPOINT)
+    except Exception as e:
+        logger.warning("minio_connection_failed", error=str(e))
     yield
     await redis_client.disconnect()
     logger.info("application_shutdown")
@@ -56,20 +61,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.middleware("http")
-async def add_request_id(request: Request, call_next):
-    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-    request.state.request_id = request_id
-    structlog.contextvars.clear_contextvars()
-    structlog.contextvars.bind_contextvars(request_id=request_id)
-    response = await call_next(request)
-    response.headers["X-Request-ID"] = request_id
-    return response
+# Phase Q7: Observability Middleware
+app.add_middleware(PrometheusMiddleware)
+app.add_middleware(LoggingMiddleware)
 
 
 # Health check
 app.include_router(health.router, tags=["health"])
+
+# Metrics endpoint (Phase Q7)
+app.include_router(metrics.router, tags=["metrics"])
+app.include_router(alerts.router, prefix="/api/v1", tags=["alerts"])
 
 # API routes
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])

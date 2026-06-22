@@ -1,0 +1,123 @@
+{
+  "title": "ClayWords Overview",
+  "uid": "claywords-overview",
+  "version": 1,
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP Request Rate",
+      "type": "graph",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "rate(http_requests_total[1m])",
+          "legendFormat": "{{method}} {{path}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP Status Distribution",
+      "type": "stat",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (status) (http_requests_total)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Response Time (P95)",
+      "type": "graph",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "http_request_duration_ms{quantile=\"0.95\"}",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "http_request_duration_ms{quantile=\"0.99\"}",
+          "legendFormat": "P99"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Tasks by State",
+      "type": "piechart",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "tasks_total",
+          "legendFormat": "{{state}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Orders by Status",
+      "type": "bargauge",
+      "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "orders_total",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Payments by Status",
+      "type": "bargauge",
+      "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "payments_total",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Active SSE Connections",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 24, "w": 8, "h": 4},
+      "targets": [
+        {
+          "expr": "active_sse_connections"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Active Workers",
+      "type": "stat",
+      "gridPos": {"x": 8, "y": 24, "w": 8, "h": 4},
+      "targets": [
+        {
+          "expr": "active_workers"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Studios by Status",
+      "type": "stat",
+      "gridPos": {"x": 16, "y": 24, "w": 8, "h": 4},
+      "targets": [
+        {
+          "expr": "studios_total",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  }
+}

@@ -1,0 +1,155 @@
+name: Backup Restore Test
+
+on:
+  schedule:
+    # 每月第一个周日凌晨 2 点
+    - cron: '0 2 1-7 * 0'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  restore-test:
+    name: Restore Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: claywords
+          POSTGRES_PASSWORD: claywords_secret
+          POSTGRES_DB: claywords_source
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Setup source database
+        env:
+          DATABASE_URL: postgresql+asyncpg://claywords:claywords_secret@localhost:5432/claywords_source
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Insert test data
+        env:
+          PGPASSWORD: claywords_secret
+        run: |
+          psql -h localhost -U claywords -d claywords_source <<EOF
+          INSERT INTO users (user_id, phone_hash, phone_encrypted, created_at, updated_at)
+          VALUES
+            ('test-user-1', 'hash1', 'encrypted1', NOW(), NOW()),
+            ('test-user-2', 'hash2', 'encrypted2', NOW(), NOW());
+
+          INSERT INTO studios (studio_id, name, location, capacity, current_load, rating, price_range_min, price_range_max, estimated_days, created_at, updated_at)
+          VALUES
+            ('test-studio-1', '测试工作室', '景德镇', 10, 0, 4.5, 100, 1000, 7, NOW(), NOW());
+          EOF
+
+      - name: Backup database
+        env:
+          PGPASSWORD: claywords_secret
+        run: |
+          mkdir -p /tmp/backups
+          pg_dump -h localhost -U claywords -F c -f /tmp/backups/test_backup.dump claywords_source
+
+          # 验证备份文件
+          ls -la /tmp/backups/test_backup.dump
+          file /tmp/backups/test_backup.dump
+
+      - name: Drop source database
+        env:
+          PGPASSWORD: claywords_secret
+        run: |
+          psql -h localhost -U claywords -d postgres -c "DROP DATABASE IF EXISTS claywords_source;"
+          psql -h localhost -U claywords -d postgres -c "CREATE DATABASE claywords_restored;"
+
+      - name: Restore database
+        env:
+          PGPASSWORD: claywords_secret
+        run: |
+          # 记录开始时间
+          START_TIME=$(date +%s)
+
+          pg_restore -h localhost -U claywords -d claywords_restored \
+              --verbose --no-owner --no-privileges \
+              /tmp/backups/test_backup.dump
+
+          END_TIME=$(date +%s)
+          RESTORE_TIME=$((END_TIME - START_TIME))
+          echo "Restore time: ${RESTORE_TIME} seconds"
+
+          # 验证 RTO ≤ 30 分钟
+          if [ $RESTORE_TIME -gt 1800 ]; then
+            echo "ERROR: RTO exceeded (${RESTORE_TIME}s > 1800s)"
+            exit 1
+          fi
+
+      - name: Verify restoration
+        env:
+          PGPASSWORD: claywords_secret
+        run: |
+          # 检查表数量
+          TABLE_COUNT=$(psql -h localhost -U claywords -d claywords_restored -t -c \
+              "SELECT count(*) FROM information_schema.tables WHERE table_schema='public';" | tr -d ' ')
+
+          echo "Tables restored: $TABLE_COUNT"
+
+          if [ "$TABLE_COUNT" -lt 10 ]; then
+            echo "ERROR: Expected at least 10 tables, got $TABLE_COUNT"
+            exit 1
+          fi
+
+          # 检查测试数据
+          USER_COUNT=$(psql -h localhost -U claywords -d claywords_restored -t -c \
+              "SELECT count(*) FROM users;" | tr -d ' ')
+          STUDIO_COUNT=$(psql -h localhost -U claywords -d claywords_restored -t -c \
+              "SELECT count(*) FROM studios;" | tr -d ' ')
+
+          echo "Users: $USER_COUNT (expected: 2)"
+          echo "Studios: $STUDIO_COUNT (expected: 1)"
+
+          if [ "$USER_COUNT" != "2" ] || [ "$STUDIO_COUNT" != "1" ]; then
+            echo "ERROR: Data integrity check failed"
+            exit 1
+          fi
+
+          echo "✓ Restoration verified successfully"
+
+      - name: Generate report
+        if: always()
+        run: |
+          cat > /tmp/restore_report.md <<EOF
+          # Restore Test Report
+
+          - **Date**: $(date)
+          - **Status**: ${{ job.status }}
+          - **Restore Time**: ${RESTORE_TIME:-N/A} seconds
+          - **RTO Target**: ≤ 1800 seconds
+          - **RTO Met**: $([ ${RESTORE_TIME:-9999} -le 1800 ] && echo "✓" || echo "✗")
+          EOF
+
+          cat /tmp/restore_report.md
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: restore-test-report
+          path: /tmp/restore_report.md
+          retention-days: 90

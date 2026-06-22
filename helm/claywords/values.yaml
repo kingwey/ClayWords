@@ -1,0 +1,214 @@
+# ClayWords Helm Chart - Default Values
+
+## 全局配置
+global:
+  environment: production  # staging / production
+  domain: claywords.com
+  imagePullPolicy: IfNotPresent
+
+## Backend 服务
+backend:
+  replicaCount: 3
+  image:
+    repository: ghcr.io/claywords/backend
+    tag: "1.0.0"
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  # 水平自动伸缩
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+  # 健康检查
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+  # 环境变量（通过 ConfigMap/Secret）
+  env:
+    DATABASE_URL: "postgresql+asyncpg://$(DATABASE_USER):$(DATABASE_PASSWORD)@postgres-service:5432/claywords"
+    REDIS_URL: "redis://redis-service:6379"
+    MINIO_ENDPOINT: "http://minio-service:9000"
+
+  # 服务
+  service:
+    type: ClusterIP
+    port: 8000
+
+## Worker 服务
+worker:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/claywords/worker
+    tag: "1.0.0"
+
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+  env:
+    DATABASE_URL: "postgresql+asyncpg://$(DATABASE_USER):$(DATABASE_PASSWORD)@postgres-service:5432/claywords"
+    REDIS_URL: "redis://redis-service:6379"
+
+## PostgreSQL
+postgres:
+  enabled: true
+  image:
+    repository: pgvector/pgvector
+    tag: pg16
+
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: ""  # 使用默认 StorageClass
+
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+  # 数据库配置
+  auth:
+    database: claywords
+    username: claywords
+    # password 通过 Secret 管理
+
+  service:
+    type: ClusterIP
+    port: 5432
+
+## Redis
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "7-alpine"
+
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  service:
+    type: ClusterIP
+    port: 6379
+
+## MinIO
+minio:
+  enabled: true
+  image:
+    repository: minio/minio
+    tag: latest
+
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: ""
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+  # MinIO 配置
+  auth:
+    rootUser: claywords
+    # rootPassword 通过 Secret 管理
+
+  service:
+    type: ClusterIP
+    apiPort: 9000
+    consolePort: 9001
+
+## Ingress
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+
+  hosts:
+    - host: api.claywords.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: backend
+
+  tls:
+    - secretName: claywords-tls
+      hosts:
+        - api.claywords.com
+
+## 监控
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+
+## 备份
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # 每日 02:00
+  retention: 30  # 保留 30 天
+
+## 安全
+security:
+  networkPolicy:
+    enabled: true
+  podSecurityPolicy:
+    enabled: false  # K8s 1.25+ 已弃用
+  podSecurityStandard: restricted
+
+## ConfigMap 和 Secret
+configMap:
+  create: true
+  data:
+    LOG_LEVEL: info
+    WORKERS: "4"
+    CORS_ORIGINS: "https://claywords.com,https://www.claywords.com"
+
+secret:
+  create: true
+  # 生产环境通过外部 Secret 管理系统（如 Vault）注入
+  data: {}
