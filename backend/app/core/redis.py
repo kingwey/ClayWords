@@ -116,6 +116,16 @@ class RedisClient:
     async def sismember(self, key: str, value) -> bool:
         return await self._client.sismember(key, value)
 
+    # ============== Scripting (用于原子滑窗限流) ==============
+    async def eval(self, script: str, numkeys: int, *keys_and_args):
+        """Execute Lua script atomically."""
+        return await self._client.eval(script, numkeys, *keys_and_args)
+
+    @property
+    def raw(self):
+        """底层 redis 客户端，用于不便包装的高阶操作。"""
+        return self._client
+
 
 redis_client = RedisClient()
 

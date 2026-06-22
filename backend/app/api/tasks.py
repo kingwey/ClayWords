@@ -86,80 +86,100 @@ async def stream_task_events(
         )
 
     async def event_generator():
-        # Send initial connection event
+        # 发送初始 connected 事件
         yield f"event: connected\ndata: {json.dumps({'task_id': task_id})}\n\n"
 
-        # 1. Replay history if Last-Event-ID provided
-        if last_event_id:
+        pubsub = redis.pubsub()
+        await pubsub.psubscribe(f"task:{task_id}:*")
+
+        # 已发送过的 event id 集合，用于 history 与 live 之间去重。
+        # SSE 的 id 字段就是 Redis Stream 的 entry id（worker 写入时已带）。
+        seen_ids: set[str] = set()
+
+        # 心跳节流：每 30 秒一次，而不是每秒；空跑 1 秒只用于让 wait_for 醒来
+        keepalive_interval_s = 30.0
+        last_keepalive = 0.0
+
+        try:
+            # 1. 先回放历史（订阅已建立，订阅期间到达的消息会被 pubsub 缓冲）
             try:
-                # Range start should be after last_event_id
-                history = await task_service.get_event_history(
-                    task_id,
-                    last_event_id=f"({last_event_id}",  # exclusive range start
-                )
+                if last_event_id:
+                    history = await task_service.get_event_history(
+                        task_id,
+                        last_event_id=f"({last_event_id}",
+                    )
+                else:
+                    history = await task_service.get_event_history(task_id)
                 for event in history:
+                    eid = str(event.get("id", ""))
+                    if eid:
+                        seen_ids.add(eid)
+                    line_id = f"id: {eid}\n" if eid else ""
                     yield (
-                        f"id: {event['id']}\n"
+                        f"{line_id}"
                         f"event: {event['type']}\n"
                         f"data: {json.dumps(event['data'])}\n\n"
                     )
             except Exception:
-                # Fallback: send all history
-                history = await task_service.get_event_history(task_id)
-                for event in history:
-                    yield (
-                        f"id: {event['id']}\n"
-                        f"event: {event['type']}\n"
-                        f"data: {json.dumps(event['data'])}\n\n"
-                    )
+                # history 失败不致命，继续走 live；不再做"全量 fallback"以免重复发送
+                pass
 
-        # 2. Subscribe to live events via Pub/Sub
-        pubsub = redis.pubsub()
-        await pubsub.psubscribe(f"task:{task_id}:*")
+            # 2. live：consume pubsub 缓冲 + 后续实时事件
+            terminal_seen = False
+            import time as _time
 
-        try:
-            timeout_count = 0
-            max_timeouts = 600  # 10 minutes
+            start_ts = _time.time()
+            max_lifetime_s = 30 * 60  # 单连接最长 30 分钟
 
-            while timeout_count < max_timeouts:
+            while not terminal_seen:
+                if _time.time() - start_ts > max_lifetime_s:
+                    break
+
                 try:
                     message = await asyncio.wait_for(
                         pubsub.get_message(ignore_subscribe_messages=True),
                         timeout=1.0,
                     )
-
-                    if message is None:
-                        timeout_count += 1
-                        # Send keepalive every second
-                        yield ": keepalive\n\n"
-                        continue
-
-                    if message["type"] == "pmessage":
-                        timeout_count = 0
-                        channel = message["channel"]
-                        data_str = message["data"]
-
-                        # Parse channel: task:<id>:<event_type>
-                        event_type = channel.rsplit(":", 1)[-1]
-
-                        try:
-                            event_data = json.loads(data_str)
-                            payload = event_data.get("data", {})
-
-                            yield (
-                                f"event: {event_type}\n"
-                                f"data: {json.dumps(payload)}\n\n"
-                            )
-
-                            # Stop on terminal events
-                            if event_type in ("done", "error"):
-                                break
-                        except json.JSONDecodeError:
-                            yield f"event: {event_type}\ndata: {data_str}\n\n"
-
                 except asyncio.TimeoutError:
-                    timeout_count += 1
-                    yield ": keepalive\n\n"
+                    message = None
+
+                now = _time.time()
+                if message is None:
+                    if now - last_keepalive >= keepalive_interval_s:
+                        yield ": keepalive\n\n"
+                        last_keepalive = now
+                    continue
+
+                if message.get("type") != "pmessage":
+                    continue
+
+                channel = message["channel"]
+                data_str = message["data"]
+                event_type = channel.rsplit(":", 1)[-1]
+
+                try:
+                    event_data = json.loads(data_str)
+                    payload = event_data.get("data", {})
+                    eid = str(event_data.get("id", ""))
+                except json.JSONDecodeError:
+                    yield f"event: {event_type}\ndata: {data_str}\n\n"
+                    continue
+
+                if eid and eid in seen_ids:
+                    # 历史已发送过；丢弃避免重复
+                    continue
+                if eid:
+                    seen_ids.add(eid)
+
+                line_id = f"id: {eid}\n" if eid else ""
+                yield (
+                    f"{line_id}"
+                    f"event: {event_type}\n"
+                    f"data: {json.dumps(payload)}\n\n"
+                )
+
+                if event_type in ("done", "error"):
+                    terminal_seen = True
 
         finally:
             await pubsub.punsubscribe(f"task:{task_id}:*")

@@ -160,15 +160,20 @@ async def payment_callback(
         # 已处理过，返回成功（支付宝要求返回 success）
         return "success"
 
-    # 记录幂等性键
+    # 记录幂等性键（修：之前用 metadata= 字段不存在；resource_id/expires_at 必填漏写）
+    from datetime import timedelta as _td
+
     idem_key = IdempotencyKey(
         key=idempotency_key,
-        metadata={
+        resource_id=out_trade_no,
+        resource_type="payment_callback",
+        response_body={
             "out_trade_no": out_trade_no,
             "trade_no": trade_no,
             "trade_status": trade_status,
             "total_amount": total_amount,
-        }
+        },
+        expires_at=datetime.utcnow() + _td(days=7),
     )
     session.add(idem_key)
 

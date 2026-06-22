@@ -14,6 +14,7 @@ from app.core.redis import redis_client
 from app.core.storage import minio_client
 from app.core.logging_middleware import LoggingMiddleware
 from app.core.metrics import PrometheusMiddleware
+from app.core.rate_limit import RateLimitMiddleware
 from app.db.session import init_db
 
 
@@ -77,7 +78,9 @@ app.add_middleware(
 # Phase Q7: Observability Middleware
 # Starlette 中间件是 LIFO（后 add 在外层）。
 # 期望 Prometheus 度量包含 LoggingMiddleware 的耗时 → 让 Prom 在最外层（后 add）。
+# 速率限制夹在两者之间：Prom 仍能记录 429，但 429 不进业务日志噪音。
 app.add_middleware(LoggingMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(PrometheusMiddleware)
 
 

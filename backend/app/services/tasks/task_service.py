@@ -200,34 +200,36 @@ class TaskService:
         data: dict,
     ):
         """
-        Publish progress event:
-        1. Pub/Sub for real-time SSE
-        2. Stream for replay support
+        发布进度事件，并保证 Stream(replay) 与 Pub/Sub(live) 共享同一 event id。
+
+        顺序：
+        1. xadd 写入 Stream，拿到自动生成的 entry id
+        2. publish 到 Pub/Sub，body 内携带该 id
+        前端 SSE 用 id 在 history 与 live 之间去重，避免重复或丢失（详见 api/tasks.py）。
         """
-        event_data = {
-            "type": event_type,
-            "data": data,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
-
-        # 1. Publish to Pub/Sub channel
-        await self.redis.publish(
-            f"task:{task_id}:{event_type}",
-            json.dumps(event_data),
-        )
-
-        # 2. Add to event stream for replay
-        await self.redis.xadd(
+        timestamp = datetime.utcnow().isoformat()
+        # 1. Stream 入库（用于 Last-Event-ID 回放）
+        event_id = await self.redis.xadd(
             f"task:{task_id}:events",
             {
                 "type": event_type,
                 "data": json.dumps(data),
-                "timestamp": event_data["timestamp"],
+                "timestamp": timestamp,
             },
-            maxlen=1000,  # Keep last 1000 events
+            maxlen=1000,  # 仅保留最近 1000 个事件
         )
-
-        # 3. Set TTL on the event stream (1 hour)
+        # 2. Pub/Sub 即时投递（携带 id 以便去重）
+        event_payload = {
+            "id": event_id,
+            "type": event_type,
+            "data": data,
+            "timestamp": timestamp,
+        }
+        await self.redis.publish(
+            f"task:{task_id}:{event_type}",
+            json.dumps(event_payload),
+        )
+        # 3. Stream TTL 1 小时
         await self.redis.expire(f"task:{task_id}:events", 3600)
 
     async def get_event_history(
