@@ -91,8 +91,10 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import axios from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const auth = useAuthStore()
 const phone = ref('')
 const code = ref('')
 const loading = ref(false)
@@ -135,11 +137,10 @@ async function handleLogin() {
   loading.value = true
   try {
     const { data } = await axios.post('/api/v1/auth/login', { phone: phone.value, code: code.value })
-    // 保存 JWT，下游所有鉴权接口都依赖这两条
-    localStorage.setItem('access_token', data.access_token)
-    localStorage.setItem('refresh_token', data.refresh_token)
+    // 统一交给 auth store 持久化 token + role
+    auth.setAuth(data)
     ElMessage.success('登录成功')
-    router.push('/design')
+    router.push(auth.defaultRoute())
   } catch {
     ElMessage.error('登录失败')
   } finally {
@@ -158,10 +159,9 @@ async function quickLogin(type: string) {
     phone.value = phoneMap[type]
     code.value = '123456'
     const { data } = await axios.post('/api/v1/auth/login', { phone: phone.value, code: code.value })
-    localStorage.setItem('access_token', data.access_token)
-    localStorage.setItem('refresh_token', data.refresh_token)
+    auth.setAuth(data)
     ElMessage.success('登录成功')
-    router.push('/design')
+    router.push(auth.defaultRoute())
   } catch {
     ElMessage.error('登录失败')
   } finally {

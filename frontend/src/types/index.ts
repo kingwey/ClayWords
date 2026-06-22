@@ -8,6 +8,7 @@ export interface LoginResponse {
   access_token: string
   refresh_token: string
   token_type: string
+  role: 'user' | 'studio' | 'admin'
 }
 
 export interface Session {
@@ -69,4 +70,56 @@ export interface SSEEvent {
   option_ready?: DesignOption
   done?: { task_id: string; options: string[] }
   error?: { code: string; message: string }
+}
+
+// ============ 工作室端 ============
+
+export interface StudioOrderSummary {
+  order_id: string
+  option_id: string
+  design_name: string
+  status: string
+  total_price: number
+  estimated_days: number
+  created_at: string
+}
+
+export interface StudioOrderDetail {
+  order_id: string
+  option_id: string
+  design_name: string
+  design_description: string
+  glb_url: string
+  thumbnail_url: string
+  status: string
+  total_price: number
+  estimated_days: number
+  user_id: string
+  studio_id: string | null
+  studio_name: string | null
+  craft_check: Record<string, any>
+  created_at: string
+  updated_at: string
+}
+
+// ============ 管理后台 ============
+
+export interface StudioListItem {
+  studio_id: string
+  name: string
+  location: string
+  specialties: string[]
+  capacity: number
+  current_load: number
+  rating: number
+  status: string
+  created_at: string
+}
+
+export interface AlertItem {
+  rule_name: string
+  severity: string
+  message: string
+  triggered_at: string
+  labels?: Record<string, string>
 }
