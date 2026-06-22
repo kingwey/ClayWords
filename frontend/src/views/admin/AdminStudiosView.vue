@@ -205,10 +205,6 @@ onMounted(fetchStudios)
   margin: 0 0 16px;
 }
 
-.loading-container {
-  padding: 40px 0;
-}
-
 .hint {
   margin-left: 8px;
   font-size: 12px;

@@ -109,14 +109,6 @@ onMounted(fetchOrders)
   margin: 0 0 16px;
 }
 
-.filter-bar {
-  margin-bottom: 20px;
-}
-
-.loading-container {
-  padding: 40px 0;
-}
-
 .mono {
   font-family: monospace;
   font-size: 13px;

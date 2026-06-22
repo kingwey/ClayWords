@@ -323,3 +323,14 @@ a:hover {
     transform: translate(-50%, -50%) scale(1) rotate(0deg);
   }
 }
+
+/* ======= 共享布局工具类 =======
+   消除各页面 .filter-bar / .loading-container 的重复 scoped 定义。
+   全局（非 scoped）规则，可命中各页面组件内的同名元素。 */
+.filter-bar {
+  margin-bottom: var(--spacing-5, 20px);
+}
+
+.loading-container {
+  padding: var(--spacing-6, 24px) 0;
+}

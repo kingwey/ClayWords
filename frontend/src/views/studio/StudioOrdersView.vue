@@ -367,10 +367,6 @@ onMounted(fetchOrders)
   font-size: 14px;
 }
 
-.filter-bar {
-  margin-bottom: var(--spacing-5, 20px);
-}
-
 .orders-list {
   display: flex;
   flex-direction: column;
@@ -422,8 +418,7 @@ onMounted(fetchOrders)
   justify-content: flex-end;
 }
 
-.empty-state,
-.loading-container {
+.empty-state {
   padding: 60px 0;
   text-align: center;
 }

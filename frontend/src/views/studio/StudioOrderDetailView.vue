@@ -225,10 +225,6 @@ onMounted(fetchDetail)
   text-align: center;
 }
 
-.loading-container {
-  padding: 40px 0;
-}
-
 .design-info {
   display: flex;
   gap: 16px;

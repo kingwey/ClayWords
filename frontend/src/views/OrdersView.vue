@@ -385,10 +385,6 @@ onMounted(() => {
   border-radius: var(--radius-full);
 }
 
-.loading-container {
-  padding: var(--spacing-6);
-}
-
 .empty-state {
   text-align: center;
   padding: var(--spacing-12);
