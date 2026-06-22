@@ -1,23 +1,25 @@
 <template>
   <div class="studio-page">
-    <header class="page-header">
-      <div>
-        <h1 class="page-title">工作室工作台</h1>
-        <p class="page-sub">管理派发给您的订单</p>
-      </div>
-      <el-button @click="handleLogout">退出登录</el-button>
-    </header>
+    <StudioNav />
 
-    <!-- 状态筛选 -->
-    <div class="filter-bar">
-      <el-radio-group v-model="statusFilter" size="default">
-        <el-radio-button value="">全部</el-radio-button>
-        <el-radio-button value="dispatched">待接单</el-radio-button>
-        <el-radio-button value="producing">制作中</el-radio-button>
-        <el-radio-button value="completed">已完成</el-radio-button>
-        <el-radio-button value="shipped">已发货</el-radio-button>
-      </el-radio-group>
-    </div>
+    <div class="studio-content">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">工作室工作台</h1>
+          <p class="page-sub">管理派发给您的订单</p>
+        </div>
+      </header>
+
+      <!-- 状态筛选 -->
+      <div class="filter-bar">
+        <el-radio-group v-model="statusFilter" size="default">
+          <el-radio-button value="">全部</el-radio-button>
+          <el-radio-button value="dispatched">待接单</el-radio-button>
+          <el-radio-button value="producing">制作中</el-radio-button>
+          <el-radio-button value="completed">已完成</el-radio-button>
+          <el-radio-button value="shipped">已发货</el-radio-button>
+        </el-radio-group>
+      </div>
 
     <!-- 订单列表 -->
     <div v-if="loading" class="loading-container">
@@ -163,6 +165,7 @@
         <el-button type="primary" @click="confirmShip">确认发货</el-button>
       </template>
     </el-dialog>
+    </div>
   </div>
 </template>
 
@@ -171,11 +174,10 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { studioApi } from '@/api/modules'
-import { useAuthStore } from '@/stores/auth'
+import StudioNav from './StudioNav.vue'
 import type { StudioOrderSummary } from '@/types'
 
 const router = useRouter()
-const auth = useAuthStore()
 
 const orders = ref<StudioOrderSummary[]>([])
 const loading = ref(false)
@@ -329,22 +331,20 @@ async function confirmShip() {
   }
 }
 
-function handleLogout() {
-  auth.clearAuth()
-  router.push('/login')
-}
-
 watch(statusFilter, fetchOrders)
 onMounted(fetchOrders)
 </script>
 
 <style scoped>
 .studio-page {
+  min-height: 100vh;
+  background: var(--color-background, #f5f5f0);
+}
+
+.studio-content {
   max-width: 960px;
   margin: 0 auto;
   padding: var(--spacing-8, 32px) var(--spacing-6, 24px);
-  min-height: 100vh;
-  background: var(--color-background, #f5f5f0);
 }
 
 .page-header {

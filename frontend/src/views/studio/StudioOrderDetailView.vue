@@ -1,15 +1,18 @@
 <template>
   <div class="detail-page">
-    <header class="page-header">
-      <el-button text @click="router.back()">&larr; 返回</el-button>
-      <h1 class="page-title">订单详情</h1>
-    </header>
+    <StudioNav />
 
-    <div v-if="loading" class="loading-container">
-      <el-skeleton :rows="6" animated />
-    </div>
+    <div class="detail-content-wrap">
+      <header class="page-header">
+        <el-button text @click="router.back()">&larr; 返回</el-button>
+        <h1 class="page-title">订单详情</h1>
+      </header>
 
-    <div v-else-if="order" class="detail-content">
+      <div v-if="loading" class="loading-container">
+        <el-skeleton :rows="6" animated />
+      </div>
+
+      <div v-else-if="order" class="detail-content">
       <!-- 状态卡 -->
       <el-card class="section">
         <div class="status-row">
@@ -76,6 +79,7 @@
     </div>
 
     <el-empty v-else description="订单不存在" />
+    </div>
   </div>
 </template>
 
@@ -84,6 +88,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { studioApi } from '@/api/modules'
+import StudioNav from './StudioNav.vue'
 import type { StudioOrderDetail } from '@/types'
 
 const route = useRoute()
@@ -159,11 +164,14 @@ onMounted(fetchDetail)
 
 <style scoped>
 .detail-page {
+  min-height: 100vh;
+  background: var(--color-background, #f5f5f0);
+}
+
+.detail-content-wrap {
   max-width: 800px;
   margin: 0 auto;
   padding: var(--spacing-8, 32px) var(--spacing-6, 24px);
-  min-height: 100vh;
-  background: var(--color-background, #f5f5f0);
 }
 
 .page-header {
