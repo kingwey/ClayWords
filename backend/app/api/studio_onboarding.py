@@ -191,16 +191,18 @@ async def approve_or_reject_studio(
 
     # 执行审核
     if request.action == "approve":
-        # 批准通过
-        studio.craft_overrides["status"] = "approved"
-        studio.craft_overrides["approved_by"] = current_user.user_id
-        studio.craft_overrides["approved_at"] = datetime.utcnow().isoformat()
+        # 批准通过（重新赋值整个 dict，确保 SQLAlchemy 追踪 JSONB 变更）
+        overrides = dict(studio.craft_overrides or {})
+        overrides["status"] = "approved"
+        overrides["approved_by"] = current_user.user_id
+        overrides["approved_at"] = datetime.utcnow().isoformat()
 
         # 调整产能（如果管理员指定）
         if request.adjusted_capacity is not None:
             studio.capacity = request.adjusted_capacity
-            studio.craft_overrides["capacity_adjusted"] = True
+            overrides["capacity_adjusted"] = True
 
+        studio.craft_overrides = overrides
         await session.commit()
 
         return {
@@ -218,10 +220,12 @@ async def approve_or_reject_studio(
                 detail="拒绝时必须提供原因"
             )
 
-        studio.craft_overrides["status"] = "rejected"
-        studio.craft_overrides["rejected_by"] = current_user.user_id
-        studio.craft_overrides["rejected_at"] = datetime.utcnow().isoformat()
-        studio.craft_overrides["rejection_reason"] = request.reason
+        overrides = dict(studio.craft_overrides or {})
+        overrides["status"] = "rejected"
+        overrides["rejected_by"] = current_user.user_id
+        overrides["rejected_at"] = datetime.utcnow().isoformat()
+        overrides["rejection_reason"] = request.reason
+        studio.craft_overrides = overrides
 
         await session.commit()
 

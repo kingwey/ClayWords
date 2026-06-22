@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models.entities import User
+from app.models.entities import User, Studio
 from app.db.session import get_session
 from app.core.crypto import get_crypto
 from app.services.auth import create_access_token, create_refresh_token, verify_token
@@ -25,12 +25,14 @@ class LoginResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    role: str = "user"
 
 
 class UserInfo(BaseModel):
     user_id: str
     phone: str
     role: str
+    studio_id: str | None = None
 
 
 class RefreshRequest(BaseModel):
@@ -72,7 +74,8 @@ async def get_current_user(
     return UserInfo(
         user_id=user.user_id,
         phone=phone_decrypted[:3] + "****" + phone_decrypted[-4:],
-        role="user"
+        role=user.role or "user",
+        studio_id=user.studio_id
     )
 
 
@@ -106,24 +109,51 @@ async def login(
 
     if not user:
         if request.phone in DEMO_ACCOUNTS:
+            demo_role = DEMO_ACCOUNTS[request.phone]
+            studio_id = None
+
+            # studio 角色：自动创建/复用一个 demo 工作室并绑定
+            if demo_role == "studio":
+                studio_id = "demo-studio-0001"
+                existing_studio = await session.execute(
+                    select(Studio).where(Studio.studio_id == studio_id)
+                )
+                if existing_studio.scalar_one_or_none() is None:
+                    session.add(Studio(
+                        studio_id=studio_id,
+                        name="景德镇 · demo 工作室",
+                        location="景德镇",
+                        specialties=["白瓷", "青花"],
+                        capacity=10,
+                        current_load=0,
+                        rating=4.8,
+                        craft_overrides={"status": "approved"},
+                    ))
+                    await session.flush()
+
             user = User(
                 phone_hash=phone_hash,
-                phone_encrypted=crypto.encrypt(request.phone)
+                phone_encrypted=crypto.encrypt(request.phone),
+                role=demo_role,
+                studio_id=studio_id,
             )
             session.add(user)
             await session.flush()
 
     if user:
         user_id = user.user_id
+        user_role = user.role or "user"
     else:
         user_id = f"user_{request.phone[-4:]}"
+        user_role = "user"
 
     access_token = create_access_token({"sub": user_id})
     refresh_token = create_refresh_token({"sub": user_id})
 
     return LoginResponse(
         access_token=access_token,
-        refresh_token=refresh_token
+        refresh_token=refresh_token,
+        role=user_role
     )
 
 

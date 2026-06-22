@@ -21,6 +21,10 @@ class User(Base):
     phone_encrypted: Mapped[str] = mapped_column(EncryptedStr(500), nullable=False)
     email_encrypted: Mapped[Optional[str]] = mapped_column(EncryptedStr(500), nullable=True)
     address_encrypted: Mapped[Optional[str]] = mapped_column(EncryptedStr(1000), nullable=True)
+    # 角色：user 普通用户 / studio 工作室 / admin 平台管理员
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
+    # 工作室用户关联的工作室 ID（role=studio 时使用）
+    studio_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("studios.studio_id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

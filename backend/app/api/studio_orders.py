@@ -9,21 +9,49 @@ from datetime import datetime
 
 from app.api.auth import get_current_user, UserInfo
 from app.db.session import get_session
-from app.models.entities import Order, OrderLog, Studio
+from app.models.entities import Order, OrderLog, Studio, DesignVersion
 
 
 router = APIRouter(prefix="/studio/orders", tags=["studio-orders"])
 
 
+def _require_studio(current_user: UserInfo) -> str:
+    """确认当前用户是工作室且已绑定 studio_id，返回 studio_id。
+
+    - role 非 studio → 403
+    - studio 但未绑定 studio_id → 403（账号未完成工作室关联）
+    """
+    if current_user.role != "studio":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="仅工作室账号可访问"
+        )
+    if not current_user.studio_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="当前账号未关联工作室"
+        )
+    return current_user.studio_id
+
+
+def _ensure_order_owned(order: Order, studio_id: str) -> None:
+    """确认订单归属于该工作室，否则 403。"""
+    if order.studio_id != studio_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权操作此订单"
+        )
+
+
 class OrderSummary(BaseModel):
     """订单摘要"""
     order_id: str
-    design_id: str
+    option_id: str
+    design_name: str
     status: str
     total_price: float
     estimated_days: int
     created_at: datetime
-    design_params: dict
 
 
 class AcceptOrderRequest(BaseModel):
@@ -41,14 +69,17 @@ class RejectOrderRequest(BaseModel):
 class OrderDetailResponse(BaseModel):
     """订单详情响应"""
     order_id: str
-    design_id: str
+    option_id: str
+    design_name: str
+    design_description: str
+    glb_url: str
+    thumbnail_url: str
     status: str
     total_price: float
     estimated_days: int
     user_id: str
     studio_id: Optional[str]
     studio_name: Optional[str]
-    design_params: dict
     craft_check: dict
     created_at: datetime
     updated_at: datetime
@@ -63,11 +94,15 @@ async def list_studio_orders(
     """获取工作室的订单列表
 
     Phase Q5.2: 工作室端订单列表
-
-    TODO: 添加工作室身份验证，确保只能看到分配给自己的订单
+    仅返回派发给当前工作室的订单。
     """
-    # For now, get all orders (TODO: filter by studio_id from user authentication)
-    stmt = select(Order).order_by(Order.created_at.desc())
+    studio_id = _require_studio(current_user)
+
+    stmt = (
+        select(Order)
+        .where(Order.studio_id == studio_id)
+        .order_by(Order.created_at.desc())
+    )
     result = await session.execute(stmt)
     orders = result.scalars().all()
 
@@ -75,18 +110,30 @@ async def list_studio_orders(
     if status_filter:
         orders = [o for o in orders if o.status == status_filter]
 
-    return [
-        OrderSummary(
-            order_id=o.order_id,
-            design_id=o.design_id,
-            status=o.status,
-            total_price=o.total_price,
-            estimated_days=o.estimated_days,
-            created_at=o.created_at,
-            design_params=o.design_params or {},
+    # 批量取关联的设计版本信息
+    option_ids = [o.option_id for o in orders if o.option_id]
+    versions: dict = {}
+    if option_ids:
+        v_result = await session.execute(
+            select(DesignVersion).where(DesignVersion.version_id.in_(option_ids))
         )
-        for o in orders
-    ]
+        versions = {v.version_id: v for v in v_result.scalars().all()}
+
+    summaries = []
+    for o in orders:
+        version = versions.get(o.option_id)
+        summaries.append(
+            OrderSummary(
+                order_id=o.order_id,
+                option_id=o.option_id,
+                design_name=version.name if version else "自定义设计",
+                status=o.status,
+                total_price=o.total_price or 0,
+                estimated_days=version.estimated_days if version else 0,
+                created_at=o.created_at,
+            )
+        )
+    return summaries
 
 
 @router.get("/{order_id}", response_model=OrderDetailResponse)
@@ -97,8 +144,10 @@ async def get_order_detail(
 ):
     """获取订单详情
 
-    TODO: 验证订单属于当前工作室
+    仅允许查看派发给当前工作室的订单。
     """
+    studio_id = _require_studio(current_user)
+
     stmt = select(Order).where(Order.order_id == order_id)
     result = await session.execute(stmt)
     order = result.scalar_one_or_none()
@@ -109,7 +158,9 @@ async def get_order_detail(
             detail="订单不存在"
         )
 
-    # Get studio name if assigned
+    _ensure_order_owned(order, studio_id)
+
+    # 取关联工作室名称
     studio_name = None
     if order.studio_id:
         studio_stmt = select(Studio).where(Studio.studio_id == order.studio_id)
@@ -118,17 +169,28 @@ async def get_order_detail(
         if studio:
             studio_name = studio.name
 
+    # 取关联设计版本信息
+    version = None
+    if order.option_id:
+        v_result = await session.execute(
+            select(DesignVersion).where(DesignVersion.version_id == order.option_id)
+        )
+        version = v_result.scalar_one_or_none()
+
     return OrderDetailResponse(
         order_id=order.order_id,
-        design_id=order.design_id,
+        option_id=order.option_id,
+        design_name=version.name if version else "自定义设计",
+        design_description=version.description if version else "",
+        glb_url=version.glb_url if version else "",
+        thumbnail_url=version.thumbnail_url if version else "",
         status=order.status,
-        total_price=order.total_price,
-        estimated_days=order.estimated_days,
+        total_price=order.total_price or 0,
+        estimated_days=version.estimated_days if version else 0,
         user_id=order.user_id,
         studio_id=order.studio_id,
         studio_name=studio_name,
-        design_params=order.design_params or {},
-        craft_check=order.craft_check or {},
+        craft_check=version.craft_check_result if version else {},
         created_at=order.created_at,
         updated_at=order.updated_at,
     )
@@ -151,6 +213,7 @@ async def accept_order(
     - 工作室 current_load +1
     """
     # 查找订单
+    studio_id = _require_studio(current_user)
     stmt = select(Order).where(Order.order_id == order_id)
     result = await session.execute(stmt)
     order = result.scalar_one_or_none()
@@ -161,29 +224,28 @@ async def accept_order(
             detail="订单不存在"
         )
 
-    # TODO: 验证订单分配给当前工作室
+    _ensure_order_owned(order, studio_id)
 
     # 状态机校验
-    if order.status != "已派单":
+    if order.status != "dispatched":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"订单当前状态为「{order.status}」，无法接单。只能接收「已派单」状态的订单。"
+            detail=f"订单当前状态为 {order.status}，无法接单。只能接收 dispatched 状态的订单。"
         )
 
     # 状态迁移
     old_status = order.status
-    order.status = "制作中"
+    order.status = "producing"
     order.updated_at = datetime.utcnow()
 
     # 记录状态变更日志
     log = OrderLog(
         order_id=order_id,
-        event_type="status_change",
-        metadata={
-            "from": old_status,
-            "to": "制作中",
-            "action": "accept",
-            "accepted_by": current_user.user_id,
+        from_status=old_status,
+        to_status="producing",
+        operator=current_user.user_id,
+        reason="工作室接单",
+        extra_data={
             "estimated_completion_date": request.estimated_completion_date,
             "notes": request.notes,
         }
@@ -205,7 +267,7 @@ async def accept_order(
     return {
         "status": "success",
         "order_id": order_id,
-        "new_status": "制作中",
+        "new_status": "producing",
         "message": "订单已接收，开始制作"
     }
 
@@ -235,6 +297,7 @@ async def reject_order(
         )
 
     # 查找订单
+    studio_id = _require_studio(current_user)
     stmt = select(Order).where(Order.order_id == order_id)
     result = await session.execute(stmt)
     order = result.scalar_one_or_none()
@@ -245,32 +308,33 @@ async def reject_order(
             detail="订单不存在"
         )
 
-    # TODO: 验证订单分配给当前工作室
+    _ensure_order_owned(order, studio_id)
 
     # 状态机校验
-    if order.status != "已派单":
+    if order.status != "dispatched":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"订单当前状态为「{order.status}」，无法拒单。只能拒绝「已派单」状态的订单。"
+            detail=f"订单当前状态为 {order.status}，无法拒单。只能拒绝 dispatched 状态的订单。"
         )
 
     # 记录拒单日志
+    old_studio_id = order.studio_id
     log = OrderLog(
         order_id=order_id,
-        event_type="reject",
-        metadata={
-            "reason": request.reason,
+        from_status=order.status,
+        to_status="pending",
+        operator=current_user.user_id,
+        reason=f"[{request.reason_category}] {request.reason}",
+        extra_data={
             "reason_category": request.reason_category,
-            "rejected_by": current_user.user_id,
-            "previous_studio_id": order.studio_id,
+            "previous_studio_id": old_studio_id,
         }
     )
     session.add(log)
 
-    # 清除当前工作室分配
-    old_studio_id = order.studio_id
+    # 清除当前工作室分配，回到待派单状态等待重新分配
     order.studio_id = None
-    order.status = "待派单"  # 回到待派单状态，等待重新分配
+    order.status = "pending"
     order.updated_at = datetime.utcnow()
 
     await session.commit()
@@ -278,7 +342,7 @@ async def reject_order(
     return {
         "status": "success",
         "order_id": order_id,
-        "new_status": "待派单",
+        "new_status": "pending",
         "message": "订单已拒绝，将重新派单",
         "rejection_reason": request.reason,
         "previous_studio": old_studio_id,
@@ -295,6 +359,7 @@ async def complete_order(
 
     Phase Q5.2+: 制作中 → 已完成，current_load -1
     """
+    studio_id = _require_studio(current_user)
     stmt = select(Order).where(Order.order_id == order_id)
     result = await session.execute(stmt)
     order = result.scalar_one_or_none()
@@ -305,28 +370,28 @@ async def complete_order(
             detail="订单不存在"
         )
 
+    _ensure_order_owned(order, studio_id)
+
     # 状态机校验
-    if order.status != "制作中":
+    if order.status != "producing":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"订单当前状态为「{order.status}」，无法标记完成。只能完成「制作中」状态的订单。"
+            detail=f"订单当前状态为 {order.status}，无法标记完成。只能完成 producing 状态的订单。"
         )
 
     # 状态迁移
     old_status = order.status
-    order.status = "已完成"
+    order.status = "completed"
     order.updated_at = datetime.utcnow()
 
     # 记录日志
     log = OrderLog(
         order_id=order_id,
-        event_type="status_change",
-        metadata={
-            "from": old_status,
-            "to": "已完成",
-            "action": "complete",
-            "completed_by": current_user.user_id,
-        }
+        from_status=old_status,
+        to_status="completed",
+        operator=current_user.user_id,
+        reason="工作室完成制作",
+        extra_data={},
     )
     session.add(log)
 
@@ -345,6 +410,6 @@ async def complete_order(
     return {
         "status": "success",
         "order_id": order_id,
-        "new_status": "已完成",
+        "new_status": "completed",
         "message": "订单已完成"
     }

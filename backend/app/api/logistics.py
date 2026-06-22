@@ -72,32 +72,42 @@ async def create_shipping(
             detail="订单不存在"
         )
 
-    # TODO: 验证订单属于当前工作室
-    # if order.studio_id != current_user.studio_id:
-    #     raise HTTPException(403, detail="无权操作此订单")
+    # 验证操作者：必须是工作室账号，且订单派发给该工作室
+    if current_user.role != "studio" or not current_user.studio_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="仅工作室账号可发货"
+        )
+    if order.studio_id != current_user.studio_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无权操作此订单"
+        )
 
-    # 验证订单状态（只能从 completed 发货）
+    # 验证订单状态（只能从已完成状态发货）
     if order.status != "completed":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"订单状态为「{order.status}」，无法发货。只能从「已完成」状态发货。"
+            detail=f"订单状态为 {order.status}，无法发货。只能从 completed 状态发货。"
         )
 
-    # 更新订单状态和物流信息
+    # 更新订单状态
     order.status = "shipped"
     order.updated_at = datetime.utcnow()
 
-    # 物流信息存储（可扩展 Order 表或使用单独的 Shipping 表）
-    # 这里使用 OrderLog 记录
+    # 物流信息记录到 OrderLog.extra_data
     shipping_log = OrderLog(
         order_id=order_id,
-        event_type="shipping",
-        metadata={
+        from_status="completed",
+        to_status="shipped",
+        operator=current_user.user_id,
+        reason="工作室发货",
+        extra_data={
+            "type": "shipping",
             "tracking_number": shipping_info.tracking_number,
             "carrier": shipping_info.carrier,
             "estimated_delivery_date": shipping_info.estimated_delivery_date,
             "notes": shipping_info.notes,
-            "shipped_by": current_user.user_id,
             "shipped_at": datetime.utcnow().isoformat(),
         }
     )
@@ -141,10 +151,10 @@ async def get_tracking_info(
             detail="订单不存在"
         )
 
-    # 查找物流信息（从 OrderLog 中读取）
+    # 查找物流信息（从 OrderLog 中读取发货记录）
     stmt = select(OrderLog).where(
         OrderLog.order_id == order_id,
-        OrderLog.event_type == "shipping"
+        OrderLog.to_status == "shipped"
     ).order_by(OrderLog.created_at.desc())
 
     result = await session.execute(stmt)
@@ -156,8 +166,8 @@ async def get_tracking_info(
             detail="订单尚未发货"
         )
 
-    tracking_number = shipping_log.metadata.get("tracking_number")
-    carrier = shipping_log.metadata.get("carrier")
+    tracking_number = shipping_log.extra_data.get("tracking_number")
+    carrier = shipping_log.extra_data.get("carrier")
 
     # Phase Q6: Mock 物流轨迹
     # TODO: 调用第三方物流 API
@@ -197,7 +207,7 @@ async def get_tracking_info(
         carrier=carrier,
         status=logistics_status,
         events=mock_events,
-        estimated_delivery_date=shipping_log.metadata.get("estimated_delivery_date"),
+        estimated_delivery_date=shipping_log.extra_data.get("estimated_delivery_date"),
     )
 
 
@@ -237,7 +247,7 @@ async def confirm_delivery(
     if order.status != "shipped":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"订单状态为「{order.status}」，无法确认收货。只能从「已发货」状态确认收货。"
+            detail=f"订单状态为 {order.status}，无法确认收货。只能从 shipped 状态确认收货。"
         )
 
     # 更新订单状态
@@ -247,12 +257,14 @@ async def confirm_delivery(
     # 记录确认收货日志
     delivery_log = OrderLog(
         order_id=order_id,
-        event_type="delivery_confirmed",
-        metadata={
-            "confirmed_by": current_user.user_id,
-            "confirmed_at": datetime.utcnow().isoformat(),
+        from_status="shipped",
+        to_status="delivered",
+        operator=current_user.user_id,
+        reason="用户确认收货",
+        extra_data={
             "rating": request.rating,
             "comment": request.comment,
+            "confirmed_at": datetime.utcnow().isoformat(),
         }
     )
     session.add(delivery_log)
