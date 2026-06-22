@@ -4,7 +4,7 @@
     <header class="design-header">
       <div class="design-header-inner">
         <div class="header-left">
-          <span class="logo-seal">陶</span>
+          <router-link to="/" class="logo-seal" title="返回首页">陶</router-link>
           <div class="header-title">
             <h1>对话式设计台</h1>
             <p>描述你想要的陶瓷，AI 实时生成可烧制方案</p>
@@ -935,6 +935,12 @@ watch(selectedOptionId, (id) => {
   font-weight: 700;
   border-radius: var(--radius-lg);
   box-shadow: 0 4px 12px rgba(45, 74, 72, 0.25);
+  text-decoration: none;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.logo-seal:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(45, 74, 72, 0.32);
 }
 .header-title h1 {
   font-size: 18px;

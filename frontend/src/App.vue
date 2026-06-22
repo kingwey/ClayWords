@@ -41,12 +41,16 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 
-// 用户端全局导航仅用于 C 端页面（首页/设计/订单等）。
-// 登录页、工作室端（/studio*）、管理后台（/admin*）都有各自的导航壳，
-// 不应叠加这条 C 端导航，否则顶部会出现对当前角色无意义的链接。
+// 用户端全局导航仅用于普通 C 端页面（首页/订单等）。
+// 以下页面各有自己的导航壳，不应叠加这条 C 端导航：
+//   - /login           登录页无导航
+//   - /design          全屏三栏工作台，自带 design-header（含页面标题与导航）
+//   - /studio*         工作室端，自带 StudioNav
+//   - /admin*          管理后台，自带 AdminNav
 const showNav = computed(() => {
   const p = route.path
   if (p === '/login') return false
+  if (p === '/design') return false
   if (p.startsWith('/studio')) return false
   if (p.startsWith('/admin')) return false
   return true
