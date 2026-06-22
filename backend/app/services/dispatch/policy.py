@@ -2,8 +2,10 @@
 
 from dataclasses import dataclass
 from typing import Optional
+
+from app.core.config import settings
 from .scoring import (
-    StudioInfo, DesignParams, ScoreBreakdown, 
+    StudioInfo, DesignParams, ScoreBreakdown,
     rank_studios, MIN_RATING_THRESHOLD
 )
 
@@ -11,8 +13,12 @@ from .scoring import (
 # Score threshold for automatic dispatch
 DISPATCH_THRESHOLD = 0.55
 
-# Central studio fallback ID (platform's own studio)
-CENTRAL_STUDIO_ID = "8672f323-7dc0-48af-ac56-482fc8c48628"
+
+def _resolve_central_studio_id(explicit: Optional[str] = None) -> Optional[str]:
+    """优先使用显式参数，其次取配置；都没有时返回 None（表示无中央兜底工作室）。"""
+    if explicit:
+        return explicit
+    return settings.CENTRAL_STUDIO_ID or None
 
 
 @dataclass
@@ -53,22 +59,25 @@ def select_best_studio(
 def dispatch_order(
     studios: list[StudioInfo],
     params: DesignParams,
-    central_studio_id: str = CENTRAL_STUDIO_ID,
+    central_studio_id: Optional[str] = None,
     threshold: float = DISPATCH_THRESHOLD
 ) -> DispatchResult:
     """
     Main dispatch logic with fallback chain.
-    
+
     Fallback chain:
     1. Best scoring studio above threshold
     2. Central studio (if not already selected)
     3. Manual dispatch required
-    
+
     Returns DispatchResult with decision details.
     """
+    # 中央工作室 ID 解析：优先显式参数，其次配置；不存在则跳过 fallback
+    central_studio_id = _resolve_central_studio_id(central_studio_id)
+
     # Rank all studios
     ranked = rank_studios(studios, params)
-    
+
     if not ranked:
         return DispatchResult(
             dispatched=False,
@@ -78,10 +87,10 @@ def dispatch_order(
             reason="No studios available with required capacity",
             requires_manual=True
         )
-    
+
     # Try best studio
     best_studio, best_score = ranked[0]
-    
+
     if should_dispatch(best_score.total, threshold):
         return DispatchResult(
             dispatched=True,
@@ -90,13 +99,15 @@ def dispatch_order(
             score=best_score.total,
             reason=f"Best match with score {best_score.total:.2f}"
         )
-    
+
     # Try central studio as fallback
-    central = next(
-        (s for s, _ in ranked if s.studio_id == central_studio_id),
-        None
-    )
-    
+    central = None
+    if central_studio_id:
+        central = next(
+            (s for s, _ in ranked if s.studio_id == central_studio_id),
+            None
+        )
+
     if central:
         central_score = next(
             (score for s, score in ranked if s.studio_id == central_studio_id),
@@ -109,7 +120,7 @@ def dispatch_order(
             score=central_score.total if central_score else 0,
             reason=f"Fallback to central studio (best score {best_score.total:.2f} below threshold)"
         )
-    
+
     # No suitable studio - requires manual intervention
     return DispatchResult(
         dispatched=False,

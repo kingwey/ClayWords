@@ -7,7 +7,15 @@ Phase Q10 P0: 生产环境配置
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
 from typing import Literal
+
+
+# 生产环境必须替换的默认值前缀（开发期占位符）
+_DEV_PLACEHOLDERS = (
+    "dev_pepper_change_in_production",
+    "dev_secret_key_change_in_production",
+)
 
 
 class Settings(BaseSettings):
@@ -24,6 +32,11 @@ class Settings(BaseSettings):
 
     # Database (默认 Postgres，测试可用 SQLite)
     DATABASE_URL: str = "postgresql+asyncpg://claywords:claywords_secret@localhost:5432/claywords"
+    # 连接池：默认 5/10 在 SSE 长连接 + 多副本下偏小
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_TIMEOUT: int = 10
+    DB_POOL_RECYCLE: int = 1800
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
@@ -56,6 +69,9 @@ class Settings(BaseSettings):
     ALIPAY_NOTIFY_URL: str = "https://api.claywords.com/api/v1/payments/callback"  # P0: HTTPS
     ALIPAY_RETURN_URL: str = "https://claywords.com/orders"  # P0: HTTPS
 
+    # 中央兜底工作室（派单 fallback 时使用）。生产环境通过环境变量注入实际 ID
+    CENTRAL_STUDIO_ID: str = ""
+
     @property
     def is_production(self) -> bool:
         """是否生产环境"""
@@ -70,6 +86,29 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list:
         """CORS 允许的源列表"""
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+
+    @model_validator(mode="after")
+    def _check_production_secrets(self) -> "Settings":
+        """生产环境启动时强校验：占位密钥/演示账号未替换 → 直接拒启。"""
+        if self.is_production:
+            problems: list[str] = []
+            if self.CRYPTO_PEPPER in _DEV_PLACEHOLDERS or not self.CRYPTO_PEPPER:
+                problems.append("CRYPTO_PEPPER")
+            if self.JWT_SECRET_KEY in _DEV_PLACEHOLDERS or not self.JWT_SECRET_KEY:
+                problems.append("JWT_SECRET_KEY")
+            if self.DEBUG:
+                problems.append("DEBUG must be False in production")
+            if self.ALIPAY_APP_ID == "2021000000000000":
+                problems.append("ALIPAY_APP_ID")
+            if self.MINIO_SECRET_KEY == "claywords_secret":
+                problems.append("MINIO_SECRET_KEY")
+            if problems:
+                raise ValueError(
+                    "Insecure production configuration: "
+                    + ", ".join(problems)
+                    + ". Override via env vars / secrets before launching."
+                )
+        return self
 
 
 settings = Settings()

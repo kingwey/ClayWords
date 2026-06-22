@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api import auth, health, sessions, sse, tasks, options, orders, demo, uploads, studio_onboarding, studio_orders, payments, logistics, metrics, alerts
 from app.core.config import settings
@@ -52,18 +53,52 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS (P0: 使用配置中的域名列表)
+# CORS (P0: 显式列举方法和 headers，配合 allow_credentials=True)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Idempotency-Key",
+        "Last-Event-ID",
+        "X-Requested-With",
+    ],
+    expose_headers=[
+        "X-RateLimit-Limit",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Reset",
+        "Retry-After",
+    ],
 )
 
 # Phase Q7: Observability Middleware
-app.add_middleware(PrometheusMiddleware)
+# Starlette 中间件是 LIFO（后 add 在外层）。
+# 期望 Prometheus 度量包含 LoggingMiddleware 的耗时 → 让 Prom 在最外层（后 add）。
 app.add_middleware(LoggingMiddleware)
+app.add_middleware(PrometheusMiddleware)
+
+
+# 全局异常兜底：未被业务捕获的异常落到这里，统一结构化日志 + 不泄露 traceback
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    trace_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    logger.exception(
+        "unhandled_exception",
+        path=request.url.path,
+        method=request.method,
+        trace_id=trace_id,
+        error_type=type(exc).__name__,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "internal_server_error",
+            "trace_id": trace_id,
+        },
+    )
 
 
 # Health check

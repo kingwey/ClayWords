@@ -19,9 +19,14 @@ async def create_order_log(
     to_status: OrderStatus,
     operator: str,
     reason: str = "",
-    metadata: dict = None
+    extra_data: dict = None,
 ) -> OrderLogModel:
-    """Create an order log entry."""
+    """Create an order log entry.
+
+    NOTE: 历史代码中曾使用 `metadata` 形参，但 SQLAlchemy 的 DeclarativeBase 已占用
+    该属性，且 OrderLog 模型的字段名是 `extra_data`。此处统一更名以避免运行时
+    `TypeError: 'metadata' is an invalid keyword argument for OrderLog`。
+    """
     log = OrderLogModel(
         id=str(uuid.uuid4()),
         order_id=order_id,
@@ -29,7 +34,7 @@ async def create_order_log(
         to_status=to_status.value,
         operator=operator,
         reason=reason,
-        metadata=metadata or {}
+        extra_data=extra_data or {},
     )
     db.add(log)
     await db.flush()
@@ -42,7 +47,7 @@ async def update_order_status(
     new_status: OrderStatus,
     operator: str = "system",
     reason: str = "",
-    metadata: dict = None
+    extra_data: dict = None,
 ) -> TransitionResult:
     """
     Update order status with validation.
@@ -77,7 +82,7 @@ async def update_order_status(
     
     # Add log entry
     await create_order_log(
-        db, order_id, current_status, new_status, operator, reason, metadata
+        db, order_id, current_status, new_status, operator, reason, extra_data
     )
     
     await db.flush()
@@ -106,7 +111,7 @@ async def cancel_order(
     
     Validates current status allows cancellation.
     """
-    from ..services.dispatch import release_studio_capacity
+    from app.services.dispatch import release_studio_capacity
     
     result = await db.execute(
         select(OrderModel).where(OrderModel.order_id == order_id)
