@@ -24,6 +24,8 @@ class MetricsRegistry:
         self.payments_total = {}  # {(status): count}
         self.orders_total = {}  # {(status): count}
         self.studios_total = {}  # {(status): count}
+        self.dispatch_total = {}  # {(outcome): count} - 派单结果
+        self.studio_load_gauge = {}  # {studio_id: current_load} - 工作室容量
 
         # 活跃连接
         self.active_sse_connections = 0
@@ -61,6 +63,20 @@ class MetricsRegistry:
     def increment_studio(self, status: str):
         """增加工作室计数"""
         self.studios_total[status] = self.studios_total.get(status, 0) + 1
+
+    def increment_dispatch(self, outcome: str):
+        """增加派单计数
+
+        outcome: success | cas_failed | no_capacity | fallback
+        """
+        self.dispatch_total[outcome] = self.dispatch_total.get(outcome, 0) + 1
+
+    def set_studio_load(self, studio_id: str, current_load: int):
+        """设置工作室容量 Gauge
+
+        记录工作室当前负载，用于容量利用率监控
+        """
+        self.studio_load_gauge[studio_id] = current_load
 
     def export_prometheus(self) -> str:
         """导出 Prometheus 格式的指标"""
@@ -120,6 +136,20 @@ class MetricsRegistry:
         lines.append("# TYPE studios_total counter")
         for status, count in self.studios_total.items():
             lines.append(f'studios_total{{status="{status}"}} {count}')
+
+        # 派单指标
+        lines.append("")
+        lines.append("# HELP dispatch_total Total dispatch attempts by outcome")
+        lines.append("# TYPE dispatch_total counter")
+        for outcome, count in self.dispatch_total.items():
+            lines.append(f'dispatch_total{{outcome="{outcome}"}} {count}')
+
+        # 工作室容量 Gauge
+        lines.append("")
+        lines.append("# HELP studio_load_gauge Current load of each studio")
+        lines.append("# TYPE studio_load_gauge gauge")
+        for studio_id, load in self.studio_load_gauge.items():
+            lines.append(f'studio_load_gauge{{studio_id="{studio_id}"}} {load}')
 
         # 活跃连接
         lines.append("")

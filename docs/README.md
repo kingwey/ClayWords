@@ -9,9 +9,10 @@
 
 | 文档 | 用途 |
 |---|---|
-| [project-analysis.md](project-analysis.md) | 当前完成度基线,后续工作的起点 |
-| [roadmap-v2.md](roadmap-v2.md) | 最新版任务清单 v2 |
-| [mvp-sprint-plan.md](mvp-sprint-plan.md) | 15-20 天 MVP 上线快速路径 |
+| [next-steps-2026-06-23.md](next-steps-2026-06-23.md) | **当前推进路线**(基于 06-23 实测,修正旧规划) — 优先看这份 |
+| [project-analysis.md](project-analysis.md) | 06-22 完成度基线快照(部分判断已被 next-steps 修正) |
+| [roadmap-v2.md](roadmap-v2.md) | 任务粒度参考清单(优先级以 next-steps 为准) |
+| [mvp-sprint-plan.md](mvp-sprint-plan.md) | MVP 上线路径(同上) |
 | [worklog-2026-06-22.md](worklog-2026-06-22.md) | 14h 开发过程的详细工作日志 |
 | [CHANGELOG.md](CHANGELOG.md) | Phase Q1~Q10 + P0 完成记录(由 11 份 Phase 报告合并) |
 

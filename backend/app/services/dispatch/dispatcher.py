@@ -136,6 +136,8 @@ async def dispatch_to_studio(
         )
         if result.rowcount == 0:
             # 容量被别人抢走了，试下一个
+            from app.core.metrics import metrics
+            metrics.increment_dispatch("cas_failed")
             continue
 
         # 写订单（同一事务）
@@ -149,6 +151,7 @@ async def dispatch_to_studio(
         # Metrics: 记录派单成功
         from app.core.metrics import metrics
         metrics.increment_order("dispatched_to_studio")
+        metrics.increment_dispatch("success")
 
         return DispatchResult(
             dispatched=True,
@@ -159,6 +162,8 @@ async def dispatch_to_studio(
         )
 
     # 所有候选都失败 → 走原 fallback 流程（中央工作室或人工）
+    from app.core.metrics import metrics
+    metrics.increment_dispatch("no_capacity")
     return dispatch_order(studios, params)
 
 
@@ -167,10 +172,19 @@ async def release_studio_capacity(db: AsyncSession, studio_id: str):
 
     使用原子 UPDATE，避免读改写竞态。
     """
-    await db.execute(
+    result = await db.execute(
         update(Studio)
         .where(Studio.studio_id == studio_id)
         .where(Studio.current_load > 0)
         .values(current_load=Studio.current_load - 1)
     )
     await db.flush()
+
+    # Metrics: 记录工作室容量 Gauge (需要查询最新值)
+    if result.rowcount > 0:
+        stmt = select(Studio).where(Studio.studio_id == studio_id)
+        studio_result = await db.execute(stmt)
+        studio = studio_result.scalar_one_or_none()
+        if studio:
+            from app.core.metrics import metrics
+            metrics.set_studio_load(studio_id, studio.current_load)

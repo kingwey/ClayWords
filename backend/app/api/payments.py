@@ -135,6 +135,9 @@ async def payment_callback(
 
     # 验证签名
     if not payment_service.verify_callback(params):
+        # Metrics: 记录验签失败
+        from app.core.metrics import metrics
+        metrics.increment_payment("verify_failed")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="签名验证失败"
