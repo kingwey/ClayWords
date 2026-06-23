@@ -11,12 +11,20 @@ import type {
 
 // ============ 认证 API ============
 
+export type SocialProvider = 'wechat' | 'feishu' | 'qq' | 'dingtalk' | 'douyin'
+
+export interface SocialBinding {
+  openid: string
+  bound_at: string
+}
+
 export interface CurrentUser {
   user_id: string
   phone: string         // 已脱敏 (139****1234)
   role: 'user' | 'studio' | 'admin'
   studio_id: string | null
   nickname: string | null
+  social_bindings: Partial<Record<SocialProvider, SocialBinding>>
 }
 
 export const authApi = {
@@ -25,9 +33,22 @@ export const authApi = {
     return client.get<CurrentUser>('/api/v1/auth/user')
   },
 
-  /** 更新当前用户资料 (目前支持 nickname; 空串清空, 长度上限 50) */
-  updateProfile(payload: { nickname?: string }) {
+  /** 更新当前用户资料 (nickname / phone; 只传需要改的字段) */
+  updateProfile(payload: { nickname?: string; phone?: string }) {
     return client.patch<CurrentUser>('/api/v1/auth/profile', payload)
+  },
+
+  /** 绑定第三方账号 (演示: 直接绑定; 生产: OAuth 回调) */
+  bindSocial(provider: SocialProvider, externalId?: string) {
+    return client.post<CurrentUser>('/api/v1/auth/social/bind', {
+      provider,
+      external_id: externalId
+    })
+  },
+
+  /** 解绑第三方账号 */
+  unbindSocial(provider: SocialProvider) {
+    return client.post<CurrentUser>('/api/v1/auth/social/unbind', { provider })
   },
 
   /** 登出 - 后端清 HttpOnly cookie */

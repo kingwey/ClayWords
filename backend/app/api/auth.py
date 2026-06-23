@@ -1,14 +1,18 @@
 """Authentication API with Real Implementation"""
 
+import uuid
+
 from fastapi import APIRouter, HTTPException, Depends, status, Cookie, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.models.entities import User, Studio
 from app.db.session import get_session
 from app.core.config import settings
 from app.core.crypto import get_crypto
+from app.core.time import utcnow
 from app.services.auth import create_access_token, create_refresh_token, verify_token
 
 
@@ -31,11 +35,30 @@ class UserInfo(BaseModel):
     role: str
     studio_id: str | None = None
     nickname: str | None = None
+    social_bindings: dict = {}
 
 
 class UpdateProfileRequest(BaseModel):
-    """用户资料更新 (目前只支持昵称, 后续可扩 email/avatar 等)"""
+    """用户资料更新 (昵称 / 手机号)。两者都可选, 只更新提供的字段。"""
     nickname: str | None = None
+    phone: str | None = None
+
+
+class BindSocialRequest(BaseModel):
+    """绑定第三方账号 (演示: 直接记录; 生产: 走 OAuth 回调换 code)。"""
+    provider: str  # wechat / feishu / qq / dingtalk / douyin
+    # 演示模式下可选传入一个外部标识; 不传则生成 mock openid
+    external_id: str | None = None
+
+
+# 支持绑定的第三方平台
+SUPPORTED_SOCIAL_PROVIDERS = {
+    "wechat": "微信",
+    "feishu": "飞书",
+    "qq": "QQ",
+    "dingtalk": "钉钉",
+    "douyin": "抖音",
+}
 
 
 # 仅在非生产环境启用的演示账号；生产环境应接入真实短信验证码
@@ -271,12 +294,33 @@ async def logout(response: Response):
     return {"message": "Logged out successfully"}
 
 
+def _mask_phone(crypto, phone_encrypted: str) -> str:
+    """解密并脱敏手机号; 失败返回空串。"""
+    try:
+        phone_decrypted = crypto.decrypt(phone_encrypted)
+        return phone_decrypted[:3] + "****" + phone_decrypted[-4:]
+    except Exception:
+        return ""
+
+
+def _to_user_info(user: User, crypto) -> UserInfo:
+    """User ORM → UserInfo (脱敏手机号 + 绑定状态)。"""
+    return UserInfo(
+        user_id=user.user_id,
+        phone=_mask_phone(crypto, user.phone_encrypted),
+        role=user.role or "user",
+        studio_id=user.studio_id,
+        nickname=user.nickname,
+        social_bindings=user.social_bindings or {},
+    )
+
+
 @router.get("/user", response_model=UserInfo)
 async def get_user(
     current_user: UserInfo = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """返回脱敏后的用户资料 (含昵称)。
+    """返回脱敏后的用户资料 (含昵称 + 第三方绑定状态)。
 
     /auth/user 不是热路径 (前端每会话拉一次), 所以这里统一查库,
     保证 nickname 等可变字段能被立即看到 (避免 fast-path 缓存陈旧)。
@@ -291,20 +335,7 @@ async def get_user(
             detail="User not found",
         )
 
-    crypto = get_crypto()
-    try:
-        phone_decrypted = crypto.decrypt(user.phone_encrypted)
-        masked = phone_decrypted[:3] + "****" + phone_decrypted[-4:]
-    except Exception:
-        masked = ""
-
-    return UserInfo(
-        user_id=user.user_id,
-        phone=masked,
-        role=user.role or "user",
-        studio_id=user.studio_id,
-        nickname=user.nickname,
-    )
+    return _to_user_info(user, get_crypto())
 
 
 @router.patch("/profile", response_model=UserInfo)
@@ -313,11 +344,11 @@ async def update_profile(
     current_user: UserInfo = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """更新当前用户资料 (目前支持 nickname)。
+    """更新当前用户资料 (昵称 / 手机号)。
 
     校验:
-    - nickname 长度 1-50; 空字符串 → 清空昵称
-    - 不允许仅空白
+    - nickname: 长度 0-50; 空字符串 → 清空昵称
+    - phone: 11 位中国大陆手机号; 重新 hash + 加密; 不可与他人重复
     """
     result = await session.execute(
         select(User).where(User.user_id == current_user.user_id)
@@ -328,6 +359,9 @@ async def update_profile(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
+    crypto = get_crypto()
+
+    # ---- 昵称 ----
     if request.nickname is not None:
         nickname = request.nickname.strip()
         if nickname == "":
@@ -340,20 +374,118 @@ async def update_profile(
         else:
             user.nickname = nickname
 
+    # ---- 手机号 ----
+    if request.phone is not None:
+        phone = request.phone.strip()
+        if not (phone.isdigit() and len(phone) == 11 and phone.startswith("1")):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="手机号格式不正确 (需 11 位中国大陆号码)",
+            )
+        new_hash = crypto.hash_phone(phone)
+        if new_hash != user.phone_hash:
+            # 唯一性检查: 不能撞到别人的手机号
+            dup = await session.execute(
+                select(User).where(
+                    User.phone_hash == new_hash,
+                    User.user_id != user.user_id,
+                )
+            )
+            if dup.scalar_one_or_none() is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="该手机号已被其他账号绑定",
+                )
+            user.phone_hash = new_hash
+            user.phone_encrypted = crypto.encrypt(phone)
+
     await session.commit()
     await session.refresh(user)
+    return _to_user_info(user, crypto)
 
-    crypto = get_crypto()
-    try:
-        phone_decrypted = crypto.decrypt(user.phone_encrypted)
-        masked = phone_decrypted[:3] + "****" + phone_decrypted[-4:]
-    except Exception:
-        masked = ""
 
-    return UserInfo(
-        user_id=user.user_id,
-        phone=masked,
-        role=user.role or "user",
-        studio_id=user.studio_id,
-        nickname=user.nickname,
+@router.post("/social/bind", response_model=UserInfo)
+async def bind_social(
+    request: BindSocialRequest,
+    current_user: UserInfo = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """绑定第三方账号。
+
+    演示实现: 直接写入一条绑定记录 (mock openid + 时间)。
+    生产环境应改为: 前端跳 OAuth 授权 → 回调带 code → 后端换 openid 再绑定。
+    """
+    provider = request.provider.strip().lower()
+    if provider not in SUPPORTED_SOCIAL_PROVIDERS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"不支持的平台: {request.provider}",
+        )
+
+    result = await session.execute(
+        select(User).where(User.user_id == current_user.user_id)
     )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
+
+    bindings = dict(user.social_bindings or {})
+    if provider in bindings:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"已绑定{SUPPORTED_SOCIAL_PROVIDERS[provider]}, 请先解绑",
+        )
+
+    external_id = request.external_id or f"demo_{provider}_{uuid.uuid4().hex[:12]}"
+    bindings[provider] = {
+        "openid": external_id,
+        "bound_at": utcnow().isoformat(),
+    }
+    user.social_bindings = bindings
+    # JSONB 原地改 dict 不一定触发脏检测, 显式标记
+    flag_modified(user, "social_bindings")
+
+    await session.commit()
+    await session.refresh(user)
+    return _to_user_info(user, get_crypto())
+
+
+@router.post("/social/unbind", response_model=UserInfo)
+async def unbind_social(
+    request: BindSocialRequest,
+    current_user: UserInfo = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """解绑第三方账号。"""
+    provider = request.provider.strip().lower()
+    if provider not in SUPPORTED_SOCIAL_PROVIDERS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"不支持的平台: {request.provider}",
+        )
+
+    result = await session.execute(
+        select(User).where(User.user_id == current_user.user_id)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
+
+    bindings = dict(user.social_bindings or {})
+    if provider not in bindings:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"尚未绑定{SUPPORTED_SOCIAL_PROVIDERS[provider]}",
+        )
+
+    del bindings[provider]
+    user.social_bindings = bindings
+    flag_modified(user, "social_bindings")
+
+    await session.commit()
+    await session.refresh(user)
+    return _to_user_info(user, get_crypto())

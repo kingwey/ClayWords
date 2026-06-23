@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api/modules'
+import type { SocialProvider, SocialBinding } from '@/api/modules'
 
 type Role = 'user' | 'studio' | 'admin' | ''
 
@@ -17,6 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   const phone = ref<string>('')           // 脱敏: 139****1234
   const nickname = ref<string>('')        // 用户自定义昵称, 可空
   const studioId = ref<string | null>(null)
+  const socialBindings = ref<Partial<Record<SocialProvider, SocialBinding>>>({})
   const userLoaded = ref(false)            // 防止反复请求 /auth/user
 
   // token 在 cookie 中，前端无法直接读取，通过 role 判断登录态
@@ -53,8 +55,19 @@ export const useAuthStore = defineStore('auth', () => {
     phone.value = ''
     nickname.value = ''
     studioId.value = null
+    socialBindings.value = {}
     userLoaded.value = false
     localStorage.removeItem('role')
+  }
+
+  /** 把 /auth/* 返回的 CurrentUser 写入 store */
+  function applyUser(data: import('@/api/modules').CurrentUser) {
+    userId.value = data.user_id
+    phone.value = data.phone || ''
+    nickname.value = data.nickname || ''
+    studioId.value = data.studio_id
+    socialBindings.value = data.social_bindings || {}
+    role.value = data.role as Role
   }
 
   /** 拉取当前用户资料; 401/网络错误自动 clearAuth 让导航回到未登录 */
@@ -63,11 +76,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (userLoaded.value && !force) return
     try {
       const { data } = await authApi.getCurrentUser()
-      userId.value = data.user_id
-      phone.value = data.phone || ''
-      nickname.value = data.nickname || ''
-      studioId.value = data.studio_id
-      role.value = data.role as Role
+      applyUser(data)
       userLoaded.value = true
     } catch {
       // 401 / 网络挂掉 → 视作未登录, 让 UI 显示登录按钮
@@ -75,11 +84,27 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /** 更新昵称 (空串清空); 后端校验长度 1-50, 失败抛错由调用方处理 */
+  /** 更新资料 (昵称 / 手机号); 只传需要改的字段, 失败抛错由调用方处理 */
+  async function updateProfile(payload: { nickname?: string; phone?: string }) {
+    const { data } = await authApi.updateProfile(payload)
+    applyUser(data)
+  }
+
+  /** 兼容旧调用: 仅更新昵称 (空串清空) */
   async function updateNickname(value: string) {
-    const { data } = await authApi.updateProfile({ nickname: value })
-    nickname.value = data.nickname || ''
-    phone.value = data.phone || phone.value
+    await updateProfile({ nickname: value })
+  }
+
+  /** 绑定第三方账号 */
+  async function bindSocial(provider: SocialProvider) {
+    const { data } = await authApi.bindSocial(provider)
+    applyUser(data)
+  }
+
+  /** 解绑第三方账号 */
+  async function unbindSocial(provider: SocialProvider) {
+    const { data } = await authApi.unbindSocial(provider)
+    applyUser(data)
   }
 
   /** 退出登录: 调后端清 cookie + 清本地 store */
@@ -105,6 +130,7 @@ export const useAuthStore = defineStore('auth', () => {
     phone,
     nickname,
     studioId,
+    socialBindings,
     isAuthenticated,
     isStudio,
     isAdmin,
@@ -113,7 +139,10 @@ export const useAuthStore = defineStore('auth', () => {
     setAuth,
     clearAuth,
     fetchUser,
+    updateProfile,
     updateNickname,
+    bindSocial,
+    unbindSocial,
     logout,
     defaultRoute
   }
