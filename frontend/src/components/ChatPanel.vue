@@ -63,34 +63,10 @@
 
       <!-- 底部工具栏 -->
       <div class="input-toolbar">
-        <!-- 左侧: 功能图标 -->
-        <div class="toolbar-left">
-          <button class="tool-icon" title="快速示例">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="3" />
-              <path d="M9 8l3 4-3 4" />
-            </svg>
-          </button>
-          <button class="tool-icon" title="上传参考图">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21.44 11.05l-9.19 9.19a5 5 0 01-7.07-7.07l9.19-9.19a3 3 0 014.24 4.24l-9.2 9.19a1 1 0 01-1.41-1.41l8.49-8.49" />
-            </svg>
-          </button>
-          <span class="tool-divider"></span>
-          <button
-            class="tool-mode"
-            :class="{ active: turboMode }"
-            title="速通模式：跳过细化，直接出方案"
-            @click="turboMode = !turboMode"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
-            <span>速通</span>
-          </button>
-        </div>
+        <!-- 左侧: 留空或放未来功能 -->
+        <div class="toolbar-left"></div>
 
-        <!-- 右侧: 模型 + 语音 + 发送 -->
+        <!-- 右侧: 模型 + 3D + 语音 + 发送 -->
         <div class="toolbar-right">
           <button class="model-select" title="切换生成方式">
             <span>陶语 · 智能匹配</span>
@@ -152,9 +128,6 @@ const emit = defineEmits<{
 }>()
 
 const chatMessages = ref<HTMLElement | null>(null)
-
-// 速通模式开关 (UI 态; 是否真的跳过细化由父组件 send 时读取)
-const turboMode = ref(false)
 
 // 消息追加后自动滚到底部（原 scrollToBottom 逻辑下沉到组件内部）
 watch(
@@ -435,44 +408,6 @@ watch(
 .tool-icon svg {
   width: 18px;
   height: 18px;
-}
-
-/* 竖向分隔线 */
-.tool-divider {
-  width: 1px;
-  height: 18px;
-  background: var(--color-border);
-  margin: 0 4px;
-}
-
-/* 速通模式开关 */
-.tool-mode {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 32px;
-  padding: 0 10px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.tool-mode svg {
-  width: 15px;
-  height: 15px;
-}
-.tool-mode:hover {
-  background: rgba(45, 74, 72, 0.06);
-}
-.tool-mode.active {
-  color: var(--color-success, #5b8a72);
-}
-.tool-mode.active svg {
-  color: var(--color-success, #5b8a72);
 }
 
 /* 模型/方式选择 */
