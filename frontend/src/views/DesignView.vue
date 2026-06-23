@@ -14,16 +14,28 @@
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/orders" class="nav-link">我的订单</router-link>
 
-          <!-- 已登录: 用户昵称徽标 -->
-          <router-link
+          <!-- 已登录: 用户昵称徽标 + 下拉菜单 -->
+          <el-dropdown
             v-if="auth.isAuthenticated"
-            to="/profile"
-            class="user-chip"
-            title="个人资料"
+            trigger="click"
+            placement="bottom-end"
+            @command="onUserCommand"
           >
-            <span class="avatar">{{ avatarLetter }}</span>
-            <span class="user-name">{{ auth.displayName }}</span>
-          </router-link>
+            <button type="button" class="user-chip" aria-label="用户菜单">
+              <span class="avatar">{{ avatarLetter }}</span>
+              <span class="user-name">{{ auth.displayName }}</span>
+              <span class="caret">▾</span>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-if="auth.isAdmin" command="admin">管理后台</el-dropdown-item>
+                <el-dropdown-item v-if="auth.isStudio" command="studio">工作室订单</el-dropdown-item>
+                <el-dropdown-item command="orders">我的订单</el-dropdown-item>
+                <el-dropdown-item command="profile">个人资料</el-dropdown-item>
+                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
     </header>
@@ -116,8 +128,11 @@ import { useHunyuan3D } from '@/composables/useHunyuan3D'
 import { GLAZE_OPTIONS, GLAZE_PALETTE_MAP } from '@/constants/glaze'
 import type { Message, Option } from '@/types/design'
 import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const auth = useAuthStore()
+const router = useRouter()
 
 // 头像字母: 昵称首字 → 脱敏手机号末位 → 兜底"陶"
 const avatarLetter = computed(() => {
@@ -127,6 +142,28 @@ const avatarLetter = computed(() => {
   const name = auth.displayName
   return name ? name.slice(0, 1).toUpperCase() : '陶'
 })
+
+async function onUserCommand(cmd: string) {
+  if (cmd === 'logout') {
+    try {
+      await ElMessageBox.confirm('确定退出当前账号?', '退出登录', {
+        confirmButtonText: '退出',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+    } catch {
+      return // 取消
+    }
+    await auth.logout()
+    ElMessage.success('已退出登录')
+    router.push('/login')
+    return
+  }
+  if (cmd === 'profile') router.push('/profile')
+  else if (cmd === 'orders') router.push('/orders')
+  else if (cmd === 'admin') router.push('/admin')
+  else if (cmd === 'studio') router.push('/studio')
+}
 
 const previewRef = ref<InstanceType<typeof PreviewCanvas> | null>(null)
 const messages = ref<Message[]>([])
@@ -630,11 +667,17 @@ watch(selectedOptionId, (id) => {
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-full, 999px);
   text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
   transition: all 0.2s;
 }
 .user-chip:hover {
   background: rgba(45, 74, 72, 0.1);
   border-color: var(--color-primary-light, #6b8a72);
+}
+.user-chip:focus-visible {
+  box-shadow: 0 0 0 3px rgba(45, 74, 72, 0.15);
 }
 .user-chip .avatar {
   display: inline-flex;
@@ -657,6 +700,10 @@ watch(selectedOptionId, (id) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.user-chip .caret {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
 }
 
 /* ========= 三栏布局 ========= */
