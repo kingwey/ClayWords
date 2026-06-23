@@ -37,7 +37,7 @@
         </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <template v-if="row.status === 'pending'">
+            <template v-if="row.status === 'pending_review' || row.status === 'pending'">
               <el-button type="success" size="small" @click="openApprove(row)">通过</el-button>
               <el-button type="danger" size="small" @click="openReject(row)">拒绝</el-button>
             </template>
@@ -97,6 +97,7 @@ const rejectReason = ref('')
 
 const STATUS_LABELS: Record<string, string> = {
   pending: '待审核',
+  pending_review: '待审核',
   active: '已激活',
   approved: '已通过',
   rejected: '已拒绝',
@@ -110,6 +111,7 @@ function statusLabel(s: string): string {
 function statusType(s: string): string {
   const map: Record<string, string> = {
     pending: 'warning',
+    pending_review: 'warning',
     active: 'success',
     approved: 'success',
     rejected: 'danger',
