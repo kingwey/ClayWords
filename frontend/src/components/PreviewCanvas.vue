@@ -175,7 +175,7 @@ defineExpose({ stageEl })
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 72px);
+  min-height: 100%;
 }
 
 .preview-header {

@@ -519,18 +519,18 @@ watch(selectedOptionId, (id) => {
 
 <style scoped>
 .design-page {
-  min-height: 100vh;
+  height: 100vh;
   background: var(--color-background);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* ========= 顶部导航 ========= */
 .design-header {
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   z-index: 20;
 }
 .design-header-inner {
@@ -603,6 +603,36 @@ watch(selectedOptionId, (id) => {
   max-width: 1920px;
   margin: 0 auto;
   width: 100%;
+  overflow: hidden;
+}
+
+/* 左中栏固定高度,内部滚动由各自组件处理 */
+.design-layout > :first-child,
+.design-layout > :nth-child(2) {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 右栏可滚动 */
+.design-layout > :last-child {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 右栏自定义滚动条 */
+.design-layout > :last-child::-webkit-scrollbar {
+  width: 6px;
+}
+.design-layout > :last-child::-webkit-scrollbar-track {
+  background: transparent;
+}
+.design-layout > :last-child::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+.design-layout > :last-child::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
 }
 
 /* ========= 响应式 ========= */
@@ -612,9 +642,21 @@ watch(selectedOptionId, (id) => {
   }
 }
 @media (max-width: 1100px) {
+  .design-page {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
   .design-layout {
     grid-template-columns: 1fr;
     height: auto;
+    overflow: visible;
+  }
+  .design-layout > :first-child,
+  .design-layout > :nth-child(2),
+  .design-layout > :last-child {
+    height: auto;
+    overflow: visible;
   }
 }
 </style>

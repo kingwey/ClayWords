@@ -162,7 +162,8 @@ const emit = defineEmits<{
 .options-panel {
   padding: 32px;
   overflow-y: auto;
-  height: calc(100vh - 72px);
+  overflow-x: hidden;
+  height: 100%;
   background: var(--color-background);
 }
 

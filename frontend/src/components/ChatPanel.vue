@@ -130,7 +130,8 @@ watch(
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 72px);
+  height: 100%;
+  overflow: hidden;
 }
 
 .chat-panel-header {
@@ -316,6 +317,8 @@ watch(
   display: flex;
   gap: 10px;
   align-items: flex-end;
+  flex-shrink: 0;
+  background: var(--color-surface);
 }
 
 .input-textarea {
