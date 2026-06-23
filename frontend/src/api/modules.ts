@@ -98,6 +98,38 @@ export const adminApi = {
     return client.get('/api/v1/orders', { params })
   },
 
+  /** Admin 视角：跨用户/跨工作室订单列表 */
+  listAllOrders(params: {
+    status_filter?: string
+    user_id?: string
+    studio_id?: string
+    keyword?: string
+    limit?: number
+    offset?: number
+  } = {}) {
+    return client.get('/api/v1/admin/orders', { params })
+  },
+
+  /** Admin 视角：订单详情 + 完整日志 */
+  getOrderDetail(orderId: string) {
+    return client.get(`/api/v1/admin/orders/${orderId}`)
+  },
+
+  /** Admin 强制取消 */
+  cancelOrder(orderId: string, reason: string) {
+    return client.post(`/api/v1/admin/orders/${orderId}/cancel`, { reason })
+  },
+
+  /** Admin 强制退款 */
+  refundOrder(orderId: string, payload: { reason: string; amount?: number }) {
+    return client.post(`/api/v1/admin/orders/${orderId}/refund`, payload)
+  },
+
+  /** Admin 重派 */
+  redispatchOrder(orderId: string, reason: string) {
+    return client.post(`/api/v1/admin/orders/${orderId}/redispatch`, { reason })
+  },
+
   /** 活跃告警 */
   listActiveAlerts() {
     return client.get<AlertItem[]>('/api/v1/alerts/active')
