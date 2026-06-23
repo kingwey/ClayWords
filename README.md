@@ -126,11 +126,11 @@ ClayWords/
 │   ├── deploy_production.sh  # 生产部署
 │   └── verify_*.py        # 验证脚本
 ├── docs/                   # 文档 (23 份)
-│   ├── Phase-Q*-完成报告.md
-│   ├── 项目最终总结.md
-│   ├── 后续开发任务清单-v2.0.md
-│   ├── MVP上线Sprint计划.md
-│   ├── 生产部署检查清单.md
+│   ├── CHANGELOG.md
+│   ├── worklog-2026-06-22.md
+│   ├── roadmap-v2.md
+│   ├── mvp-sprint-plan.md
+│   ├── production-deploy-checklist.md
 │   └── security-owasp-top10.md
 └── .github/workflows/      # CI/CD (5 个 workflow)
 ```
@@ -290,32 +290,24 @@ GitHub Actions 自动运行：
 
 ## 📖 文档
 
-### Phase 完成报告 (9 份)
-- [Phase Q1 - 数据层](./docs/Phase-Q1-完成报告.md)
-- [Phase Q2 - 队列与 SSE](./docs/Phase-Q2-完成报告.md)
-- [Phase Q4 - 文件上传](./docs/Phase-Q4-完成报告.md)
-- [Phase Q5 - 工作室入驻](./docs/Phase-Q5-完成报告.md)
-- [Phase Q6 - 支付与物流](./docs/Phase-Q6-完成报告.md)
-- [Phase Q7 - 可观测性](./docs/Phase-Q7-完成报告.md)
-- [Phase Q8 - 备份恢复](./docs/Phase-Q8-完成报告.md)
-- [Phase Q9 - 测试 + CI/CD](./docs/Phase-Q9-完成报告.md)
-- [Phase Q10 - 安全加固](./docs/Phase-Q10-完成报告.md)
+### Phase 完成报告（已合并到 CHANGELOG）
+- [Phase Q1-Q10 + P0 完整开发日志](./docs/CHANGELOG.md)
 
 ### 技术文档 (4 份)
 - [OWASP Top 10 安全检查](./docs/security-owasp-top10.md)
 - [开源许可证合规](./docs/license-compliance.md)
-- [备份恢复 Runbook](./docs/备份恢复-Runbook.md)
-- [PostgreSQL 高可用配置](./docs/PG-高可用配置.md)
+- [备份恢复 Runbook](./docs/backup-recovery-runbook.md)
+- [PostgreSQL 高可用配置](./docs/pg-ha-config.md)
 
 ### 部署文档 (2 份)
-- [生产部署检查清单](./docs/生产部署检查清单.md)
-- [P0 生产配置报告](./docs/P0-生产部署配置完成报告.md)
+- [生产部署检查清单](./docs/production-deploy-checklist.md)
+- [P0 生产配置（已合并到 CHANGELOG）](./docs/CHANGELOG.md)
 
 ### 总结与规划 (4 份)
-- [项目最终总结](./docs/项目最终总结.md)
-- [项目分析报告](./docs/项目分析报告.md)
-- [后续开发任务清单 v2.0](./docs/后续开发任务清单-v2.0.md)
-- [MVP 上线 Sprint 计划](./docs/MVP上线Sprint计划.md)
+- [工作总结 2026-06-22](./docs/worklog-2026-06-22.md)
+- [项目分析报告](./docs/project-analysis.md)
+- [后续开发任务清单 v2.0](./docs/roadmap-v2.md)
+- [MVP 上线 Sprint 计划](./docs/mvp-sprint-plan.md)
 
 ## 🎯 下一步
 
@@ -337,7 +329,7 @@ GitHub Actions 自动运行：
 
 ### MVP 上线（20 天）
 
-详见 [MVP 上线 Sprint 计划](./docs/MVP上线Sprint计划.md)
+详见 [MVP 上线 Sprint 计划](./docs/mvp-sprint-plan.md)
 
 ## 🏆 项目成就
 

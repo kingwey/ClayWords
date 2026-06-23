@@ -73,7 +73,7 @@ def test_restore_pg_script_exists():
 def test_runbook_exists():
     """测试备份恢复 runbook 存在"""
     print("\nTesting backup runbook...", end=" ")
-    runbook = Path("docs/备份恢复-Runbook.md")
+    runbook = Path("docs/backup-recovery-runbook.md")
     if runbook.exists():
         size = runbook.stat().st_size
         if size > 2000:
@@ -90,7 +90,7 @@ def test_runbook_exists():
 def test_ha_config_exists():
     """测试高可用配置文档存在"""
     print("\nTesting HA config doc...", end=" ")
-    doc = Path("docs/PG-高可用配置.md")
+    doc = Path("docs/pg-ha-config.md")
     if doc.exists():
         size = doc.stat().st_size
         if size > 1000:

@@ -64,7 +64,7 @@
 
 ### 1. 后续开发任务清单 v2.0
 
-**文件**: `docs/后续开发任务清单-v2.0.md`
+**文件**: `docs/roadmap-v2.md`
 
 **内容结构**:
 - Phase 0: 基础设施部署（P0，3 天）
@@ -87,7 +87,7 @@
 
 ### 2. MVP 上线 Sprint 计划
 
-**文件**: `docs/MVP上线Sprint计划.md`
+**文件**: `docs/mvp-sprint-plan.md`
 
 **内容结构**:
 - Sprint 0: 基础设施部署（3 天）
@@ -293,10 +293,10 @@ Week 6:  优化和上线
 
 ## 📚 相关文档
 
-1. [项目最终总结](./项目最终总结.md)
-2. [后续开发任务清单 v2.0](./后续开发任务清单-v2.0.md)
-3. [MVP 上线 Sprint 计划](./MVP上线Sprint计划.md)
-4. [生产部署检查清单](./生产部署检查清单.md)
+1. [工作总结 2026-06-22](./worklog-2026-06-22.md)
+2. [后续开发任务清单 v2.0](./roadmap-v2.md)
+3. [MVP 上线 Sprint 计划](./mvp-sprint-plan.md)
+4. [生产部署检查清单](./production-deploy-checklist.md)
 5. [OWASP 安全检查](./security-owasp-top10.md)
 
 ---

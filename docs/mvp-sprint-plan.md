@@ -304,8 +304,8 @@ Week 5:  Sprint 3 完成 (1天) + Sprint 4 (2天) = 上线 ✅
 ## 📚 参考文档
 
 - [后端 API 文档](../backend/README.md)
-- [Phase Q1-Q10 完成报告](./项目最终总结.md)
-- [生产部署检查清单](./生产部署检查清单.md)
+- [Phase Q1-Q10 完整开发日志](./CHANGELOG.md)
+- [生产部署检查清单](./production-deploy-checklist.md)
 - [OWASP 安全检查](./security-owasp-top10.md)
 
 ---

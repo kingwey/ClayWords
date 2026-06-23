@@ -377,7 +377,7 @@ await redis.publish(channel, json.dumps({"id": event_id, ...}))
 
 ### 中价值、需要业务确认
 
-4. **工艺匹配升级到向量相似度** ✅ 已完成方案设计（见 [工艺匹配升级到向量相似度方案.md](工艺匹配升级到向量相似度方案.md)）
+4. **工艺匹配升级到向量相似度** ✅ 已完成方案设计（见 [工艺匹配升级到向量相似度方案](craft-vector-similarity.md)）
    `services/dispatch/scoring.py` 工艺匹配现在用 substring 双向 `in` 判断，"白瓷" / "薄胎白瓷" / "釉下彩白瓷" 互相误中。
    建议方案：
    - 维护 specialties 标签字典（material/category 标准化 enum）
@@ -385,12 +385,12 @@ await redis.publish(channel, json.dumps({"id": event_id, ...}))
    - `<=>` 余弦相似度替代 substring
    离线 embedding 任务需要确认 LLM 服务可用性。
 
-5. **Order.idempotency_key 与 IdempotencyKey 表的职责梳理** ✅ 已完成（见 [Order幂等性机制梳理.md](Order幂等性机制梳理.md)）
+5. **Order.idempotency_key 与 IdempotencyKey 表的职责梳理** ✅ 已完成（见 [Order 幂等性机制梳理](order-idempotency.md)）
    两个机制都在用：`Order.idempotency_key` 加 `unique` 约束做 DB 层去重，`IdempotencyKey` 表存响应体用于 replay。功能不重叠但容易混淆，建议补充设计文档说明使用场景。
 
 ### 长期改进
 
-6. **业务监控仪表盘补强** ✅ 已完成（见 [业务监控仪表盘配置指南.md](业务监控仪表盘配置指南.md)）
+6. **业务监控仪表盘补强** ✅ 已完成（见 [业务监控仪表盘配置指南](business-metrics-dashboard.md)）
    现有 Prometheus 指标偏基础（HTTP/DB/Redis），缺少业务维度（每小时下单数、派单成功率分布、工作室容量利用率）。
 
 7. **CI 加测试覆盖率门槛** ✅ 已完成（见附录 D）

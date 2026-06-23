@@ -11,7 +11,7 @@
 
 本次工作涵盖两个主要方向：
 
-1. **技术债推进**（基于 [代码优化报告-2026-06-22.md](代码优化报告-2026-06-22.md) 第八章）
+1. **技术债推进**（基于 [代码优化报告](code-review-2026-06-22.md) 第八章）
    - 完成 7 项「高价值、低风险」优化建议
    - 3 项代码实施 + 4 项方案文档
 
@@ -31,9 +31,9 @@
 
 | 项目 | 状态 | 成果 | 文档 |
 |------|------|------|------|
-| **datetime timezone-aware** | ✅ | 修复 7 处时区问题 | [附录 B](代码优化报告-2026-06-22.md#附录-b) |
-| **token HttpOnly cookie** | ✅ | 修复 XSS 风险 | [附录 C](代码优化报告-2026-06-22.md#附录-c) |
-| **DesignView 拆分** | ✅ | 减重 78 行代码 | [附录 A](代码优化报告-2026-06-22.md#附录-a) |
+| **datetime timezone-aware** | ✅ | 修复 7 处时区问题 | [附录 B](code-review-2026-06-22.md#附录-b) |
+| **token HttpOnly cookie** | ✅ | 修复 XSS 风险 | [附录 C](code-review-2026-06-22.md#附录-c) |
+| **DesignView 拆分** | ✅ | 减重 78 行代码 | [附录 A](code-review-2026-06-22.md#附录-a) |
 
 **影响**:
 - 安全性提升（XSS 防护）
@@ -44,10 +44,10 @@
 
 | 项目 | 状态 | 文档 | 说明 |
 |------|------|------|------|
-| **CI 测试覆盖率门槛** | ✅ | [附录 D](代码优化报告-2026-06-22.md#附录-d) | pytest --cov-fail-under=70 |
-| **Order 幂等性梳理** | ✅ | [Order幂等性机制梳理.md](Order幂等性机制梳理.md) | 设计文档 + 使用指南 |
-| **业务监控仪表盘** | ✅ | [业务监控仪表盘配置指南.md](业务监控仪表盘配置指南.md) | Grafana 面板 + 告警规则 |
-| **工艺匹配向量相似度** | ✅ | [工艺匹配升级到向量相似度方案.md](工艺匹配升级到向量相似度方案.md) | 实施方案（4 周计划） |
+| **CI 测试覆盖率门槛** | ✅ | [附录 D](code-review-2026-06-22.md#附录-d) | pytest --cov-fail-under=70 |
+| **Order 幂等性梳理** | ✅ | [order-idempotency.md](order-idempotency.md) | 设计文档 + 使用指南 |
+| **业务监控仪表盘** | ✅ | [business-metrics-dashboard.md](business-metrics-dashboard.md) | Grafana 面板 + 告警规则 |
+| **工艺匹配向量相似度** | ✅ | [craft-vector-similarity.md](craft-vector-similarity.md) | 实施方案（4 周计划） |
 
 **价值**:
 - 规范化流程（测试覆盖率、幂等性设计）
@@ -165,11 +165,11 @@ OBJ 文件: https://hunyuan-prod-1258344699.cos.ap-guangzhou.tencentcos.cn/3d/ou
 
 ### 2.6 文档清单
 
-1. **[Hunyuan3D-integration-plan.md](Hunyuan3D-integration-plan.md)** (10 章节)
+1. **[hunyuan3d-integration-plan.md](hunyuan3d-integration-plan.md)** (10 章节)
    - 技术方案、数据模型、实施步骤
    - 成本估算、风险回退、长期演进
 
-2. **[Hunyuan3D-deployment-guide.md](Hunyuan3D-deployment-guide.md)** (10 章节)
+2. **[hunyuan3d-deployment-guide.md](hunyuan3d-deployment-guide.md)** (10 章节)
    - 部署步骤、环境配置、监控告警
    - 前端集成、常见问题、验证清单
 
@@ -191,12 +191,12 @@ backend/
 └── .env                        # 开发环境配置
 
 docs/
-├── Order幂等性机制梳理.md
-├── 业务监控仪表盘配置指南.md
-├── 工艺匹配升级到向量相似度方案.md
-├── Hunyuan3D-integration-plan.md
-├── Hunyuan3D-deployment-guide.md
-└── ClayWords代码优化与功能扩展最终报告.md  # 本文档
+├── order-idempotency.md
+├── business-metrics-dashboard.md
+├── craft-vector-similarity.md
+├── hunyuan3d-integration-plan.md
+├── hunyuan3d-deployment-guide.md
+└── claywords-final-report.md  # 本文档
 ```
 
 ### 3.2 修改文件（5 个）
@@ -212,7 +212,7 @@ backend/
 └── app/services/tasks/task_service.py     # +1 行（metrics 埋点）
 
 docs/
-└── 代码优化报告-2026-06-22.md  # 更新完成状态标记
+└── code-review-2026-06-22.md  # 更新完成状态标记
 ```
 
 ### 3.3 代码统计
@@ -485,12 +485,12 @@ open http://localhost:8000/docs
 
 ### B. 相关文档
 
-1. [代码优化报告-2026-06-22.md](代码优化报告-2026-06-22.md) - 原始技术债分析
-2. [Order幂等性机制梳理.md](Order幂等性机制梳理.md) - 幂等性设计文档
-3. [业务监控仪表盘配置指南.md](业务监控仪表盘配置指南.md) - Grafana 配置
-4. [工艺匹配升级到向量相似度方案.md](工艺匹配升级到向量相似度方案.md) - 向量相似度方案
-5. [Hunyuan3D-integration-plan.md](Hunyuan3D-integration-plan.md) - Hunyuan3D 技术方案
-6. [Hunyuan3D-deployment-guide.md](Hunyuan3D-deployment-guide.md) - Hunyuan3D 部署指南
+1. [code-review-2026-06-22.md](code-review-2026-06-22.md) - 原始技术债分析
+2. [order-idempotency.md](order-idempotency.md) - 幂等性设计文档
+3. [business-metrics-dashboard.md](business-metrics-dashboard.md) - Grafana 配置
+4. [craft-vector-similarity.md](craft-vector-similarity.md) - 向量相似度方案
+5. [hunyuan3d-integration-plan.md](hunyuan3d-integration-plan.md) - Hunyuan3D 技术方案
+6. [hunyuan3d-deployment-guide.md](hunyuan3d-deployment-guide.md) - Hunyuan3D 部署指南
 
 ### C. 联系信息
 

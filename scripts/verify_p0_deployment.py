@@ -131,7 +131,7 @@ def test_deploy_script_exists():
 def test_deployment_checklist():
     """测试部署检查清单存在"""
     print("\nTesting deployment checklist...", end=" ")
-    checklist = Path("docs/生产部署检查清单.md")
+    checklist = Path("docs/production-deploy-checklist.md")
     if checklist.exists():
         size = checklist.stat().st_size
         if size > 3000:

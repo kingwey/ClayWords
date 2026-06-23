@@ -468,7 +468,7 @@ minio_url = await storage.upload(...)
 
 ## 十、联系与支持
 
-- **文档**: [Hunyuan3D-integration-plan.md](Hunyuan3D-integration-plan.md)
+- **文档**: [hunyuan3d-integration-plan.md](hunyuan3d-integration-plan.md)
 - **腾讯云文档**: https://cloud.tencent.com/document/product/1804/126189
 - **API 控制台**: https://console.cloud.tencent.com/tokenhub
 
