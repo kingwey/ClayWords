@@ -62,55 +62,143 @@
         <div class="visual-chip chip-2">月形花瓶</div>
         <div class="visual-chip chip-3">三孔香插</div>
         <div class="visual-chip chip-4">怀宠橘猫</div>
-        <svg class="hero-ceramic" viewBox="0 0 400 500">
+        <svg class="hero-ceramic" viewBox="0 0 400 540">
           <defs>
-            <linearGradient id="vaseBody" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#f5f0e8" />
-              <stop offset="35%" stop-color="#e8d5c0" />
-              <stop offset="70%" stop-color="#c97b5a" />
-              <stop offset="100%" stop-color="#7a4a32" />
+            <!-- 釉面主渐变: 象牙白 → 蜜桃 → 暖陶 -->
+            <linearGradient id="vaseBody" x1="50%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stop-color="#fdfbf7" />
+              <stop offset="18%" stop-color="#f7f0e6" />
+              <stop offset="42%" stop-color="#f2e4d4" />
+              <stop offset="68%" stop-color="#e8c9a8" />
+              <stop offset="88%" stop-color="#d49968" />
+              <stop offset="100%" stop-color="#b86f42" />
             </linearGradient>
-            <radialGradient id="vaseHighlight" cx="30%" cy="25%" r="45%">
-              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55" />
+            <linearGradient id="vaseRound" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.48" />
+              <stop offset="35%" stop-color="#ffffff" stop-opacity="0.05" />
+              <stop offset="65%" stop-color="#4a3426" stop-opacity="0" />
+              <stop offset="100%" stop-color="#4a3426" stop-opacity="0.32" />
+            </linearGradient>
+            <linearGradient id="vaseSpec" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0" />
+              <stop offset="42%" stop-color="#ffffff" stop-opacity="0.65" />
               <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+            </linearGradient>
+            <radialGradient id="vaseRim" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#fffefb" />
+              <stop offset="100%" stop-color="#e8d3bd" />
             </radialGradient>
-            <filter id="vaseShadow" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="20" stdDeviation="18" flood-color="#2a2420" flood-opacity="0.22" />
+            <radialGradient id="flameGlow" cx="50%" cy="70%" r="60%">
+              <stop offset="0%" stop-color="#fffaed" stop-opacity="0.9" />
+              <stop offset="45%" stop-color="#ffd68a" stop-opacity="0.6" />
+              <stop offset="100%" stop-color="#ff9a4a" stop-opacity="0" />
+            </radialGradient>
+            <filter id="vaseShadow">
+              <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#3a2a1e" flood-opacity="0.22" />
             </filter>
           </defs>
-          <!-- 底部阴影 -->
-          <ellipse cx="200" cy="465" rx="130" ry="14" fill="rgba(42,36,32,0.12)" />
-          <!-- 瓶身 -->
-          <path
-            filter="url(#vaseShadow)"
-            d="M 200 60
-               Q 175 70 170 110
-               Q 130 150 120 210
-               Q 105 300 130 390
-               Q 145 450 200 455
-               Q 255 450 270 390
-               Q 295 300 280 210
-               Q 270 150 230 110
-               Q 225 70 200 60 Z"
-            fill="url(#vaseBody)"
-            stroke="rgba(42,36,32,0.15)"
-            stroke-width="1"
-          />
-          <!-- 高光 -->
-          <ellipse cx="165" cy="230" rx="18" ry="110" fill="url(#vaseHighlight)" />
-          <!-- 瓶口 -->
-          <ellipse cx="200" cy="62" rx="24" ry="7" fill="#fffdf9" stroke="rgba(42,36,32,0.2)" stroke-width="1" />
-          <ellipse cx="200" cy="60" rx="24" ry="7" fill="#e8d5c0" />
-          <!-- 桂花点缀 -->
-          <g opacity="0.55">
-            <circle cx="185" cy="180" r="4" fill="#d4a574" />
-            <circle cx="225" cy="220" r="3.5" fill="#d4a574" />
-            <circle cx="175" cy="290" r="3.5" fill="#d4a574" />
-            <circle cx="230" cy="330" r="4" fill="#d4a574" />
-            <circle cx="190" cy="370" r="3" fill="#d4a574" />
+
+          <ellipse cx="200" cy="510" rx="145" ry="18" fill="rgba(58,42,30,0.14)" />
+          <ellipse cx="200" cy="508" rx="95" ry="10" fill="rgba(58,42,30,0.10)" />
+
+          <!-- 散落花瓣 -->
+          <g opacity="0.75">
+            <ellipse cx="95" cy="502" rx="9" ry="5" fill="#d99068" transform="rotate(-35 95 502)" />
+            <ellipse cx="118" cy="510" rx="8" ry="4.5" fill="#c27f58" transform="rotate(22 118 510)" />
+            <ellipse cx="285" cy="508" rx="9" ry="5" fill="#d99068" transform="rotate(40 285 508)" />
+            <ellipse cx="305" cy="500" rx="7" ry="4" fill="#c27f58" transform="rotate(-18 305 500)" />
+            <ellipse cx="142" cy="515" rx="6" ry="3.5" fill="#e8a578" transform="rotate(55 142 515)" />
+            <ellipse cx="260" cy="514" rx="6" ry="3.5" fill="#e8a578" transform="rotate(-48 260 514)" />
           </g>
-          <!-- 墨绿文字装饰 -->
-          <text x="200" y="420" text-anchor="middle" fill="#2d4a48" font-family="Songti SC, serif" font-size="14" opacity="0.7" letter-spacing="4">陶语 · 定制</text>
+
+          <!-- 底座托盘 -->
+          <ellipse cx="200" cy="492" rx="102" ry="18" fill="#b86f42" filter="url(#vaseShadow)" />
+          <ellipse cx="200" cy="488" rx="102" ry="18" fill="url(#vaseBody)" />
+          <ellipse cx="200" cy="488" rx="102" ry="18" fill="url(#vaseRound)" opacity="0.7" />
+          <ellipse cx="200" cy="482" rx="88" ry="10" fill="rgba(58,42,30,0.08)" />
+
+          <!-- 陶罐 -->
+          <ellipse cx="165" cy="478" rx="18" ry="12" fill="#9a5f38" />
+          <ellipse cx="165" cy="474" rx="18" ry="12" fill="#b86f42" />
+          <ellipse cx="165" cy="474" rx="18" ry="12" fill="url(#vaseRound)" opacity="0.5" />
+
+          <!-- 毛笔 -->
+          <rect x="180" y="478" width="70" height="4" rx="2" fill="#3a2a1e" />
+          <ellipse cx="180" cy="480" rx="3" ry="3.5" fill="#1a1410" />
+          <path d="M 250 478 L 262 476 L 262 484 L 250 482 Z" fill="#4a3426" />
+
+          <!-- 橘猫 -->
+          <g transform="translate(245, 460)">
+            <ellipse cx="0" cy="18" rx="16" ry="14" fill="#e8935f" />
+            <ellipse cx="0" cy="18" rx="16" ry="14" fill="url(#vaseRound)" opacity="0.4" />
+            <ellipse cx="0" cy="4" rx="12" ry="11" fill="#e8935f" />
+            <ellipse cx="0" cy="4" rx="12" ry="11" fill="url(#vaseRound)" opacity="0.4" />
+            <path d="M -7 -2 L -9 -8 L -4 -4 Z" fill="#e8935f" />
+            <path d="M 7 -2 L 9 -8 L 4 -4 Z" fill="#e8935f" />
+            <ellipse cx="-4" cy="3" rx="1.8" ry="2.5" fill="#2a2420" />
+            <ellipse cx="4" cy="3" rx="1.8" ry="2.5" fill="#2a2420" />
+            <circle cx="-4.2" cy="2.2" r="0.7" fill="#fff" opacity="0.8" />
+            <circle cx="3.8" cy="2.2" r="0.7" fill="#fff" opacity="0.8" />
+            <circle cx="0" cy="6" r="1.2" fill="#d97848" />
+            <ellipse cx="-5" cy="8" rx="2" ry="1.5" fill="#c27f58" opacity="0.6" />
+            <ellipse cx="5" cy="8" rx="2" ry="1.5" fill="#c27f58" opacity="0.6" />
+            <path d="M 14 20 Q 22 18 26 22" stroke="#e8935f" stroke-width="3.5" fill="none" stroke-linecap="round" />
+          </g>
+
+          <g opacity="0.8">
+            <ellipse cx="152" cy="488" rx="7" ry="4" fill="#e8a578" transform="rotate(10 152 488)" />
+            <ellipse cx="248" cy="490" rx="7" ry="4" fill="#d99068" transform="rotate(-25 248 490)" />
+          </g>
+
+          <!-- 主瓶身 -->
+          <g filter="url(#vaseShadow)">
+            <path d="M 192 460 C 191 450 190 440 188 428 C 186 400 185 360 185 310 Q 184 240 186 180 Q 188 130 194 98 C 196 88 198 80 200 72 C 202 80 204 88 206 98 Q 212 130 214 180 Q 216 240 215 310 C 215 360 214 400 212 428 C 210 440 209 450 208 460 Z" fill="url(#vaseBody)" />
+            <path d="M 192 460 C 191 450 190 440 188 428 C 186 400 185 360 185 310 Q 184 240 186 180 Q 188 130 194 98 C 196 88 198 80 200 72 C 202 80 204 88 206 98 Q 212 130 214 180 Q 216 240 215 310 C 215 360 214 400 212 428 C 210 440 209 450 208 460 Z" fill="url(#vaseRound)" />
+          </g>
+
+          <path d="M 182 140 Q 180 240 182 330 Q 184 400 186 450 Q 180 400 178 330 Q 178 240 182 140 Z" fill="url(#vaseSpec)" opacity="0.8" />
+
+          <!-- 兔月浮雕 -->
+          <g opacity="0.32" stroke="#8a6845" stroke-width="1.8" fill="none" stroke-linecap="round">
+            <ellipse cx="200" cy="280" rx="28" ry="10" />
+            <ellipse cx="200" cy="265" rx="18" ry="15" />
+            <ellipse cx="200" cy="242" rx="13" ry="11" />
+            <path d="M 192 230 Q 190 215 192 205" />
+            <path d="M 208 230 Q 210 215 208 205" />
+          </g>
+
+          <g opacity="0.18" stroke="#2d4a48" stroke-width="1.5" fill="none" stroke-linecap="round">
+            <path d="M 186 380 Q 200 375 214 380 Q 207 385 200 384 Q 193 383 186 380 Z" />
+          </g>
+
+          <path d="M 192 72 C 192 66 193 62 194 58 L 206 58 C 207 62 208 66 208 72 Z" fill="url(#vaseBody)" />
+          <path d="M 192 72 C 192 66 193 62 194 58 L 206 58 C 207 62 208 66 208 72 Z" fill="url(#vaseRound)" />
+
+          <ellipse cx="200" cy="58" rx="22" ry="7" fill="url(#vaseRim)" stroke="rgba(58,42,30,0.18)" stroke-width="0.9" />
+          <ellipse cx="200" cy="56" rx="18" ry="5" fill="#e8d3bd" />
+          <ellipse cx="200" cy="55" rx="14" ry="3.5" fill="rgba(138,104,69,0.35)" />
+
+          <!-- 蜡烛 + 火焰 -->
+          <rect x="198.5" y="42" width="3" height="16" rx="1.5" fill="#4a3426" />
+          <ellipse cx="200" cy="42" rx="1.5" ry="1" fill="#2a2420" />
+
+          <g transform="translate(200, 28)">
+            <ellipse cx="0" cy="4" rx="18" ry="16" fill="url(#flameGlow)" />
+            <path d="M 0 14 Q -6 8 -6 2 Q -6 -6 0 -12 Q 6 -6 6 2 Q 6 8 0 14 Z" fill="#ffc466" opacity="0.85" />
+            <path d="M 0 10 Q -3.5 6 -3.5 2 Q -3.5 -3 0 -8 Q 3.5 -3 3.5 2 Q 3.5 6 0 10 Z" fill="#fffaed" opacity="0.95" />
+            <ellipse cx="0" cy="-9" rx="2" ry="3.5" fill="#fff8e1" opacity="0.7" />
+          </g>
+
+          <g opacity="0.15" fill="#8a8a8a">
+            <ellipse cx="198" cy="16" rx="2.5" ry="5" />
+            <ellipse cx="202" cy="12" rx="2" ry="4" />
+            <ellipse cx="199" cy="8" rx="1.5" ry="3.5" />
+          </g>
+
+          <ellipse cx="200" cy="458" rx="28" ry="6" fill="rgba(58,42,30,0.16)" />
+          <ellipse cx="200" cy="456" rx="28" ry="6" fill="#9a5f38" />
+
+          <text x="200" y="430" text-anchor="middle" fill="#2d4a48" font-family="Songti SC, serif" font-size="12" opacity="0.45" letter-spacing="4">陶语 · 定制</text>
         </svg>
       </div>
     </section>
