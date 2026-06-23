@@ -45,6 +45,7 @@ htmlcov/
 
 # Logs
 *.log
+*.log.*
 logs/
 
 # Database
