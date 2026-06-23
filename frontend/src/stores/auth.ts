@@ -15,6 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
   const role = ref<Role>((localStorage.getItem('role') as Role) || '')
   const userId = ref<string>('')
   const phone = ref<string>('')           // 脱敏: 139****1234
+  const nickname = ref<string>('')        // 用户自定义昵称, 可空
   const studioId = ref<string | null>(null)
   const userLoaded = ref(false)            // 防止反复请求 /auth/user
 
@@ -23,8 +24,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isStudio = computed(() => role.value === 'studio')
   const isAdmin = computed(() => role.value === 'admin')
 
-  /** 显示用昵称: 优先脱敏手机号, 退化到 user_id 前 8 位; 未登录返回空串 */
+  /** 显示用昵称: 优先用户自定义昵称, 退化到脱敏手机号, 再退化到 user_id 前 8 位 */
   const displayName = computed(() => {
+    if (nickname.value) return nickname.value
     if (phone.value) return phone.value
     if (userId.value) return userId.value.slice(0, 8)
     return ''
@@ -49,6 +51,7 @@ export const useAuthStore = defineStore('auth', () => {
     role.value = ''
     userId.value = ''
     phone.value = ''
+    nickname.value = ''
     studioId.value = null
     userLoaded.value = false
     localStorage.removeItem('role')
@@ -62,6 +65,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { data } = await authApi.getCurrentUser()
       userId.value = data.user_id
       phone.value = data.phone || ''
+      nickname.value = data.nickname || ''
       studioId.value = data.studio_id
       role.value = data.role as Role
       userLoaded.value = true
@@ -69,6 +73,13 @@ export const useAuthStore = defineStore('auth', () => {
       // 401 / 网络挂掉 → 视作未登录, 让 UI 显示登录按钮
       clearAuth()
     }
+  }
+
+  /** 更新昵称 (空串清空); 后端校验长度 1-50, 失败抛错由调用方处理 */
+  async function updateNickname(value: string) {
+    const { data } = await authApi.updateProfile({ nickname: value })
+    nickname.value = data.nickname || ''
+    phone.value = data.phone || phone.value
   }
 
   /** 退出登录: 调后端清 cookie + 清本地 store */
@@ -92,6 +103,7 @@ export const useAuthStore = defineStore('auth', () => {
     role,
     userId,
     phone,
+    nickname,
     studioId,
     isAuthenticated,
     isStudio,
@@ -101,6 +113,7 @@ export const useAuthStore = defineStore('auth', () => {
     setAuth,
     clearAuth,
     fetchUser,
+    updateNickname,
     logout,
     defaultRoute
   }

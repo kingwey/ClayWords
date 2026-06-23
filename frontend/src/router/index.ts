@@ -24,6 +24,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/OrdersView.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/views/ProfileView.vue'),
+    meta: { requiresAuth: true }
+  },
   // ============ 工作室端 ============
   {
     path: '/studio',

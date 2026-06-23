@@ -30,6 +30,12 @@ class UserInfo(BaseModel):
     phone: str
     role: str
     studio_id: str | None = None
+    nickname: str | None = None
+
+
+class UpdateProfileRequest(BaseModel):
+    """用户资料更新 (目前只支持昵称, 后续可扩 email/avatar 等)"""
+    nickname: str | None = None
 
 
 # 仅在非生产环境启用的演示账号；生产环境应接入真实短信验证码
@@ -270,10 +276,11 @@ async def get_user(
     current_user: UserInfo = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """返回脱敏后的用户资料；这里才解密手机号，避免每请求都跑 crypto。"""
-    if current_user.phone:
-        return current_user
+    """返回脱敏后的用户资料 (含昵称)。
 
+    /auth/user 不是热路径 (前端每会话拉一次), 所以这里统一查库,
+    保证 nickname 等可变字段能被立即看到 (避免 fast-path 缓存陈旧)。
+    """
     result = await session.execute(
         select(User).where(User.user_id == current_user.user_id)
     )
@@ -296,4 +303,57 @@ async def get_user(
         phone=masked,
         role=user.role or "user",
         studio_id=user.studio_id,
+        nickname=user.nickname,
+    )
+
+
+@router.patch("/profile", response_model=UserInfo)
+async def update_profile(
+    request: UpdateProfileRequest,
+    current_user: UserInfo = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """更新当前用户资料 (目前支持 nickname)。
+
+    校验:
+    - nickname 长度 1-50; 空字符串 → 清空昵称
+    - 不允许仅空白
+    """
+    result = await session.execute(
+        select(User).where(User.user_id == current_user.user_id)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
+
+    if request.nickname is not None:
+        nickname = request.nickname.strip()
+        if nickname == "":
+            user.nickname = None
+        elif len(nickname) > 50:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="昵称长度不能超过 50",
+            )
+        else:
+            user.nickname = nickname
+
+    await session.commit()
+    await session.refresh(user)
+
+    crypto = get_crypto()
+    try:
+        phone_decrypted = crypto.decrypt(user.phone_encrypted)
+        masked = phone_decrypted[:3] + "****" + phone_decrypted[-4:]
+    except Exception:
+        masked = ""
+
+    return UserInfo(
+        user_id=user.user_id,
+        phone=masked,
+        role=user.role or "user",
+        studio_id=user.studio_id,
+        nickname=user.nickname,
     )

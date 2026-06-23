@@ -35,6 +35,7 @@
                 <el-dropdown-item v-if="auth.isAdmin" command="admin">管理后台</el-dropdown-item>
                 <el-dropdown-item v-if="auth.isStudio" command="studio">工作室订单</el-dropdown-item>
                 <el-dropdown-item command="orders">我的订单</el-dropdown-item>
+                <el-dropdown-item command="profile">个人资料</el-dropdown-item>
                 <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -120,6 +121,10 @@ async function onUserCommand(cmd: string) {
     if (route.meta.requiresAuth) {
       router.push('/login')
     }
+    return
+  }
+  if (cmd === 'profile') {
+    router.push('/profile')
     return
   }
   if (cmd === 'admin') router.push('/admin')
