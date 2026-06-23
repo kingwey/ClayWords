@@ -33,6 +33,9 @@ python-multipart==0.0.32
 boto3==1.43.34
 minio==7.2.14
 
+# Worker / craft_check (numpy 计算)
+numpy==2.2.1
+
 # Additional dependencies
 click==8.1.9
 starlette==0.45.3

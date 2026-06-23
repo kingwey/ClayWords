@@ -25,6 +25,23 @@ def event_loop():
     loop.close()
 
 
+def pytest_collection_modifyitems(config, items):
+    """凡未显式打标记的用例,默认归入 `unit`。
+
+    背景: CI 跑 `pytest -m "unit"`,但历史上大多数 test_ 函数没加
+    `@pytest.mark.unit`,导致 96 个用例只跑出 36 个 —— 覆盖率门槛(70%)
+    自然达不到,CI 一直在挂。给所有 test_* 默认补上 `unit` 标记,
+    让真实的 96 个用例都进 CI。
+    """
+    import pytest as _pytest
+    for item in items:
+        existing = {mark.name for mark in item.iter_markers()}
+        # 已显式声明分类的不动(smoke / integration / e2e / slow)
+        if existing & {"unit", "smoke", "integration", "e2e", "slow"}:
+            continue
+        item.add_marker(_pytest.mark.unit)
+
+
 @pytest.fixture
 def mock_metrics():
     """Mock metrics for testing"""

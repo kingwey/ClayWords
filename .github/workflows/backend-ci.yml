@@ -90,8 +90,9 @@ jobs:
           CRYPTO_PEPPER: ci_test_pepper
         run: |
           cd backend
-          pytest tests/ -v -m "unit"
-          # Coverage threshold (70%) enforced by pytest.ini
+          # 默认跑 unit + smoke（conftest.py 会把未显式打标记的用例归入 unit）
+          # 覆盖率门槛 50%（pytest.ini）；后续随测试补齐逐步上调到 70%
+          pytest tests/ -v -m "unit or smoke"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
