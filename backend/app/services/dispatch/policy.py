@@ -79,6 +79,8 @@ def dispatch_order(
     ranked = rank_studios(studios, params)
 
     if not ranked:
+        from app.core.metrics import metrics
+        metrics.increment_dispatch("no_studios")
         return DispatchResult(
             dispatched=False,
             studio_id=None,
@@ -92,6 +94,8 @@ def dispatch_order(
     best_studio, best_score = ranked[0]
 
     if should_dispatch(best_score.total, threshold):
+        from app.core.metrics import metrics
+        metrics.increment_dispatch("policy_best")
         return DispatchResult(
             dispatched=True,
             studio_id=best_studio.studio_id,
@@ -113,6 +117,8 @@ def dispatch_order(
             (score for s, score in ranked if s.studio_id == central_studio_id),
             None
         )
+        from app.core.metrics import metrics
+        metrics.increment_dispatch("fallback_central")
         return DispatchResult(
             dispatched=True,
             studio_id=central.studio_id,
@@ -122,6 +128,8 @@ def dispatch_order(
         )
 
     # No suitable studio - requires manual intervention
+    from app.core.metrics import metrics
+    metrics.increment_dispatch("requires_manual")
     return DispatchResult(
         dispatched=False,
         studio_id=None,

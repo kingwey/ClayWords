@@ -11,6 +11,11 @@ from app.core.time import utcnow
 from app.api.auth import get_current_user, UserInfo
 from app.db.session import get_session
 from app.models.entities import Order, OrderLog
+from app.services.logistics import (
+    get_provider,
+    LogisticsStatus,
+    TrackingEvent as ProviderEvent,
+)
 
 
 router = APIRouter(prefix="/logistics", tags=["logistics"])
@@ -170,35 +175,30 @@ async def get_tracking_info(
     tracking_number = shipping_log.extra_data.get("tracking_number")
     carrier = shipping_log.extra_data.get("carrier")
 
-    # Phase Q6: Mock 物流轨迹
-    # TODO: 调用第三方物流 API
-    mock_events = [
-        TrackingEvent(
-            time=shipping_log.created_at.isoformat(),
-            status="shipped",
-            description="【景德镇】已揽收",
-            location="江西省景德镇市"
-        ),
-        TrackingEvent(
-            time=utcnow().isoformat(),
-            status="in_transit",
-            description="快件在【景德镇转运中心】已发出",
-            location="江西省景德镇市"
-        ),
-    ]
+    # 通过 Provider 抽象查询真实/Mock 轨迹
+    # 真实快递接入时只需在 services/logistics 增加 Provider, 此处零改动
+    provider = get_provider(carrier)
+    try:
+        result = await provider.query_tracking(tracking_number or "")
+    except Exception as e:
+        # 第三方查询失败 → 502 给前端, 但保留 carrier/tracking_number 信息
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"物流查询服务暂时不可用: {type(e).__name__}",
+        )
 
-    # 根据订单状态判断物流状态
-    logistics_status = "shipped"
-    if order.status == "shipped":
-        logistics_status = "in_transit"
-    elif order.status == "delivered":
+    # Provider 标准化状态 → 旧 API 字符串状态 (向后兼容前端)
+    logistics_status = result.status.value
+
+    # 若订单已确认收货, 用订单实际状态覆盖 (Provider 可能滞后)
+    if order.status == "delivered" and result.status != LogisticsStatus.DELIVERED:
         logistics_status = "delivered"
-        mock_events.append(
-            TrackingEvent(
-                time=utcnow().isoformat(),
-                status="delivered",
+        result.events.append(
+            ProviderEvent(
+                time=utcnow(),
+                status=LogisticsStatus.DELIVERED,
                 description="快件已签收",
-                location="用户地址"
+                location="用户地址",
             )
         )
 
@@ -207,8 +207,17 @@ async def get_tracking_info(
         tracking_number=tracking_number,
         carrier=carrier,
         status=logistics_status,
-        events=mock_events,
-        estimated_delivery_date=shipping_log.extra_data.get("estimated_delivery_date"),
+        events=[
+            TrackingEvent(
+                time=ev.time.isoformat(),
+                status=ev.status.value,
+                description=ev.description,
+                location=ev.location,
+            )
+            for ev in result.events
+        ],
+        estimated_delivery_date=result.estimated_delivery_date
+            or shipping_log.extra_data.get("estimated_delivery_date"),
     )
 
 

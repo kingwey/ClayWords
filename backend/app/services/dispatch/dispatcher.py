@@ -97,6 +97,8 @@ async def dispatch_to_studio(
     version = version_result.scalar_one_or_none()
 
     if not version:
+        from app.core.metrics import metrics
+        metrics.increment_dispatch("version_not_found")
         return DispatchResult(
             dispatched=False,
             studio_id=None,
@@ -148,10 +150,15 @@ async def dispatch_to_studio(
         )
         await db.flush()
 
-        # Metrics: 记录派单成功
+        # Metrics: 记录派单成功 + 工作室容量 Gauge
         from app.core.metrics import metrics
         metrics.increment_order("dispatched_to_studio")
         metrics.increment_dispatch("success")
+        # 占位成功后 current_load 已 +1，刷新 Gauge（避免 release 才更新导致单调下降假象）
+        metrics.set_studio_load(
+            studio_info.studio_id,
+            studio_info.current_load + 1,
+        )
 
         return DispatchResult(
             dispatched=True,

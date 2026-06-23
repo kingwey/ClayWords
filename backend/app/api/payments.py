@@ -95,6 +95,9 @@ async def create_payment(
             body=f"陶瓷定制服务"
         )
 
+        from app.core.metrics import metrics
+        metrics.increment_payment("create_success")
+
         return CreatePaymentResponse(
             order_id=order.order_id,
             pay_url=payment_result["pay_url"],
@@ -104,6 +107,8 @@ async def create_payment(
         )
 
     except Exception as e:
+        from app.core.metrics import metrics
+        metrics.increment_payment("create_failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"创建支付失败: {str(e)}"
@@ -276,6 +281,9 @@ async def refund_payment(
             order.updated_at = utcnow()
             await session.commit()
 
+            from app.core.metrics import metrics
+            metrics.increment_payment("refund_success")
+
             return {
                 "status": "success",
                 "order_id": order.order_id,
@@ -284,12 +292,18 @@ async def refund_payment(
                 "message": "退款申请已提交"
             }
         else:
+            from app.core.metrics import metrics
+            metrics.increment_payment("refund_failed")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="退款失败"
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
+        from app.core.metrics import metrics
+        metrics.increment_payment("refund_error")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"退款失败: {str(e)}"

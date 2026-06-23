@@ -109,6 +109,17 @@ class Settings(BaseSettings):
                 problems.append("ALIPAY_APP_ID")
             if self.MINIO_SECRET_KEY == "claywords_secret":
                 problems.append("MINIO_SECRET_KEY")
+            # P0: 生产环境 MinIO 必须走 TLS，否则预签名 URL 暴露在 HTTP 明文中
+            if not self.MINIO_SECURE:
+                problems.append("MINIO_SECURE must be True in production")
+            # 生产环境支付/前端回跳 URL 必须 HTTPS
+            if not self.ALIPAY_NOTIFY_URL.startswith("https://"):
+                problems.append("ALIPAY_NOTIFY_URL must be HTTPS in production")
+            if not self.ALIPAY_RETURN_URL.startswith("https://"):
+                problems.append("ALIPAY_RETURN_URL must be HTTPS in production")
+            # 兜底工作室必须显式注入（防派单全部失败时静默回退到空 ID）
+            if not self.CENTRAL_STUDIO_ID:
+                problems.append("CENTRAL_STUDIO_ID must be set in production")
             if problems:
                 raise ValueError(
                     "Insecure production configuration: "

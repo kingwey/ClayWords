@@ -159,3 +159,60 @@ class TestDispatchPolicy:
         result = dispatch_order([weak], params, threshold=0.99)
         assert result.dispatched is False
         assert result.requires_manual is True
+
+
+class TestDispatchMetrics:
+    """派单四个 outcome 必须各自累加到 dispatch_total Counter。
+
+    覆盖 [services/dispatch/policy.py] 的所有四条出口分支：
+    policy_best / fallback_central / requires_manual / no_studios
+    """
+
+    def _reset_dispatch_counter(self):
+        from app.core.metrics import metrics
+        metrics.dispatch_total.clear()
+
+    def _delta(self, outcome: str) -> int:
+        from app.core.metrics import metrics
+        return metrics.dispatch_total.get(outcome, 0)
+
+    def test_best_path_increments_policy_best(self):
+        self._reset_dispatch_counter()
+        s1 = _make_studio(studio_id="best")
+        dispatch_order([s1], _make_params())
+        assert self._delta("policy_best") == 1
+
+    def test_fallback_central_increments(self):
+        self._reset_dispatch_counter()
+        weak = _make_studio(
+            studio_id="weak",
+            specialties=["紫砂"],
+            rating=4.0,
+        )
+        central = _make_studio(
+            studio_id="central",
+            specialties=["紫砂"],
+            rating=4.0,
+        )
+        dispatch_order(
+            [weak, central],
+            _make_params(material="景泰蓝", category="壁画"),
+            central_studio_id="central",
+            threshold=0.99,
+        )
+        assert self._delta("fallback_central") == 1
+
+    def test_requires_manual_increments(self):
+        self._reset_dispatch_counter()
+        weak = _make_studio(studio_id="weak", specialties=["紫砂"], rating=4.0)
+        dispatch_order(
+            [weak],
+            _make_params(material="景泰蓝", category="壁画"),
+            threshold=0.99,
+        )
+        assert self._delta("requires_manual") == 1
+
+    def test_no_studios_increments(self):
+        self._reset_dispatch_counter()
+        dispatch_order([], _make_params())
+        assert self._delta("no_studios") == 1
