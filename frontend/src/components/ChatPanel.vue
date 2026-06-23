@@ -50,35 +50,69 @@
       </div>
     </div>
 
-    <!-- 输入栏 -->
-    <div class="chat-input">
-      <textarea
-        :value="inputText"
-        class="input-textarea"
-        placeholder="例如：送给妈妈的生日礼物，属兔，喜欢月亮桂花，冷白釉，玄关尺寸..."
-        @input="emit('update:inputText', ($event.target as HTMLTextAreaElement).value)"
-        @keydown.enter.ctrl="emit('send')"
-      ></textarea>
-      <div class="input-actions">
-        <button
-          class="generate3d-btn"
-          @click="emit('generate3d')"
-          :disabled="sending"
-          title="使用 Hunyuan3D 生成真实 3D 模型"
-        >
+    <!-- 输入区域 -->
+    <div class="chat-input-container">
+      <!-- 快捷功能行 -->
+      <div class="quick-actions">
+        <button class="quick-action-btn" title="快速示例">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
           </svg>
-          3D
+          <span>快速</span>
         </button>
-        <button class="send-btn" @click="emit('send')" :disabled="sending">
+        <button class="quick-action-btn" title="上传参考图">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 2L11 13" />
-            <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="M21 15l-5-5L5 21" />
           </svg>
+          <span>参考图</span>
         </button>
+        <button class="quick-action-btn" title="工艺说明">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4M12 8h.01" />
+          </svg>
+          <span>工艺库</span>
+        </button>
+        <button class="quick-action-btn" title="历史方案">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>历史</span>
+        </button>
+      </div>
+
+      <!-- 输入框 -->
+      <div class="chat-input">
+        <textarea
+          :value="inputText"
+          class="input-textarea"
+          placeholder="发消息或按住空格说话... 例如：送给妈妈的生日礼物，属兔，喜欢月亮桂花，冷白釉"
+          @input="emit('update:inputText', ($event.target as HTMLTextAreaElement).value)"
+          @keydown.enter.ctrl="emit('send')"
+        ></textarea>
+        <div class="input-actions">
+          <button
+            class="generate3d-btn"
+            @click="emit('generate3d')"
+            :disabled="sending"
+            title="使用 Hunyuan3D 生成真实 3D 模型"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+            3D
+          </button>
+          <button class="send-btn" @click="emit('send')" :disabled="sending">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13" />
+              <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </aside>
@@ -310,36 +344,46 @@ watch(
   background: rgba(201, 123, 90, 0.05);
 }
 
+/* ========= 输入区域 (卡片式容器) ========= */
+.chat-input-container {
+  margin: 0 16px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.chat-input-container:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 16px rgba(45, 74, 72, 0.08);
+}
+
 /* ========= 输入栏 ========= */
 .chat-input {
-  padding: 16px 20px 20px;
-  border-top: 1px solid var(--color-border-light);
+  padding: 14px 14px 12px;
   display: flex;
   gap: 10px;
   align-items: flex-end;
-  flex-shrink: 0;
-  background: var(--color-surface);
+  background: transparent;
 }
 
 .input-textarea {
   flex: 1;
   min-height: 48px;
   max-height: 140px;
-  padding: 12px 16px;
-  font-size: 13px;
+  padding: 10px 12px;
+  font-size: 14px;
   font-family: inherit;
   line-height: 1.6;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background: var(--color-background);
+  border: none;
+  border-radius: 10px;
+  background: transparent;
   color: var(--color-text-primary);
   resize: none;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.input-textarea:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(45, 74, 72, 0.08);
 }
 .input-textarea::placeholder {
   color: var(--color-text-muted);
@@ -347,14 +391,16 @@ watch(
 
 .input-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  align-items: flex-end;
+  padding-bottom: 2px;
 }
 
 .generate3d-btn {
-  width: 60px;
-  height: 48px;
-  min-width: 60px;
-  border-radius: var(--radius-xl);
+  width: 52px;
+  height: 40px;
+  min-width: 52px;
+  border-radius: 10px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-accent);
@@ -363,9 +409,9 @@ watch(
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   transition: all 0.2s;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
 }
 .generate3d-btn:disabled {
@@ -378,15 +424,15 @@ watch(
   transform: translateY(-1px);
 }
 .generate3d-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .send-btn {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  border-radius: var(--radius-xl);
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 10px;
   border: none;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   color: #fff;
@@ -395,7 +441,7 @@ watch(
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(45, 74, 72, 0.25);
+  box-shadow: 0 2px 8px rgba(45, 74, 72, 0.2);
 }
 .send-btn:disabled {
   opacity: 0.5;
@@ -403,11 +449,51 @@ watch(
 }
 .send-btn:not(:disabled):hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(45, 74, 72, 0.35);
+  box-shadow: 0 4px 12px rgba(45, 74, 72, 0.3);
 }
 .send-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
+}
+
+/* ========= 快捷功能行 ========= */
+.quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border-light);
+  background: rgba(0, 0, 0, 0.015);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.quick-actions::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.quick-action-btn:hover {
+  background: rgba(45, 74, 72, 0.06);
+  color: var(--color-primary);
+}
+.quick-action-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 /* Scrollbar */
