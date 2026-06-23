@@ -14,9 +14,6 @@
           <router-link to="/design">
             <span class="nav-zh">开始设计</span>
           </router-link>
-          <router-link to="/orders">
-            <span class="nav-zh">我的订单</span>
-          </router-link>
 
           <!-- 已登录: 用户徽标 + 下拉菜单 -->
           <el-dropdown
