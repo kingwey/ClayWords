@@ -606,11 +606,16 @@ watch(selectedOptionId, (id) => {
   overflow: hidden;
 }
 
-/* 左中栏固定高度,内部滚动由各自组件处理 */
-.design-layout > :first-child,
-.design-layout > :nth-child(2) {
+/* 左栏固定高度,内部滚动由 ChatPanel 处理 */
+.design-layout > :first-child {
   height: 100%;
   overflow: hidden;
+}
+
+/* 中栏固定高度,内部滚动由 OptionCards 自己处理 */
+.design-layout > :nth-child(2) {
+  height: 100%;
+  min-height: 0;
 }
 
 /* 右栏可滚动 */
