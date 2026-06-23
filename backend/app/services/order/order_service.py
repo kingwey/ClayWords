@@ -6,6 +6,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from app.models.entities import Order as OrderModel, OrderLog as OrderLogModel
+from app.core.time import utcnow
 from .state_machine import (
     OrderStatus, validate_transition, transition,
     TransitionResult, is_terminal_status, STATUS_INFO
@@ -78,7 +79,7 @@ async def update_order_status(
     
     # Update order status
     order.status = new_status.value
-    order.updated_at = datetime.utcnow()
+    order.updated_at = utcnow()
     
     # Add log entry
     await create_order_log(
@@ -146,7 +147,7 @@ async def cancel_order(
     
     # Update status
     order.status = OrderStatus.CANCELLED.value
-    order.updated_at = datetime.utcnow()
+    order.updated_at = utcnow()
     
     # Create log
     await create_order_log(
@@ -157,9 +158,13 @@ async def cancel_order(
     # Release studio capacity if was dispatched
     if order.studio_id:
         await release_studio_capacity(db, order.studio_id)
-    
+
     await db.flush()
-    
+
+    # Metrics: 记录订单取消
+    from app.core.metrics import metrics
+    metrics.increment_order("cancelled")
+
     return trans_result
 
 

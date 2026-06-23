@@ -7,6 +7,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import uuid
 
 from app.models.types import Vector, EncryptedStr, JSONB
+from app.core.time import utcnow
 
 
 class Base(DeclarativeBase):
@@ -25,8 +26,8 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
     # 工作室用户关联的工作室 ID（role=studio 时使用）
     studio_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("studios.studio_id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     sessions: Mapped[list["Session"]] = relationship(back_populates="user")
 
@@ -45,8 +46,8 @@ class Studio(Base):
     price_range_max: Mapped[float] = mapped_column(Float, default=1000)
     estimated_days: Mapped[int] = mapped_column(Integer, default=7)
     craft_overrides: Mapped[dict] = mapped_column(JSONB(), default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     orders: Mapped[list["Order"]] = relationship(back_populates="studio")
 
@@ -57,8 +58,8 @@ class Session(Base):
     session_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.user_id"), nullable=False)
     title: Mapped[str] = mapped_column(String(200), default="新会话")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     user: Mapped["User"] = relationship(back_populates="sessions")
     messages: Mapped[list["SessionMessage"]] = relationship(back_populates="session", order_by="SessionMessage.created_at")
@@ -72,7 +73,7 @@ class SessionMessage(Base):
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     design_params: Mapped[Optional[dict]] = mapped_column(JSONB(), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     session: Mapped["Session"] = relationship(back_populates="messages")
 
@@ -88,7 +89,7 @@ class DesignTemplate(Base):
     thumbnail_url: Mapped[str] = mapped_column(String(500), nullable=False)
     embedding: Mapped[Optional[list]] = mapped_column(Vector(1536), nullable=True)
     default_params: Mapped[dict] = mapped_column(JSONB(), default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class Design(Base):
@@ -97,8 +98,8 @@ class Design(Base):
     design_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     session_id: Mapped[str] = mapped_column(String(36), ForeignKey("sessions.session_id"), nullable=False)
     design_params: Mapped[dict] = mapped_column(JSONB(), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     versions: Mapped[list["DesignVersion"]] = relationship(back_populates="design",
                                                              order_by="DesignVersion.version_no.desc()")
@@ -121,7 +122,7 @@ class DesignVersion(Base):
     estimated_weight: Mapped[float] = mapped_column(Float, default=0)
     price: Mapped[float] = mapped_column(Float, default=0)
     estimated_days: Mapped[int] = mapped_column(Integer, default=7)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     design: Mapped["Design"] = relationship(back_populates="versions")
 
@@ -145,8 +146,8 @@ class Order(Base):
     total_price: Mapped[float] = mapped_column(Float, default=0)
     workorder_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     studio: Mapped[Optional["Studio"]] = relationship(back_populates="orders")
     logs: Mapped[list["OrderLog"]] = relationship(back_populates="order", order_by="OrderLog.created_at")
@@ -162,7 +163,7 @@ class OrderLog(Base):
     operator: Mapped[str] = mapped_column(String(50), default="system")
     reason: Mapped[str] = mapped_column(Text, default="")
     extra_data: Mapped[dict] = mapped_column(JSONB(), default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     order: Mapped["Order"] = relationship(back_populates="logs")
 
@@ -177,8 +178,8 @@ class StudioCraftOverride(Base):
     actual_shrinkage_rate: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     max_overhang_angle: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     calibration_data: Mapped[dict] = mapped_column(JSONB(), default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 class IdempotencyKey(Base):
@@ -189,8 +190,8 @@ class IdempotencyKey(Base):
     resource_id: Mapped[str] = mapped_column(String(36), nullable=False)
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False)
     response_body: Mapped[dict] = mapped_column(JSONB(), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
         Index('idx_idempotency_expires', 'expires_at'),
@@ -207,8 +208,8 @@ class Task(Base):
     result_uri: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     progress: Mapped[int] = mapped_column(Integer, default=0)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     __table_args__ = (
         Index('idx_tasks_state', 'state'),
@@ -228,8 +229,8 @@ class Upload(Base):
     state: Mapped[str] = mapped_column(String(20), default="pending")  # pending, scanning, clean, quarantined
     scan_result: Mapped[Optional[dict]] = mapped_column(JSONB(), nullable=True)
     uploader_id: Mapped[str] = mapped_column(String(36), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     __table_args__ = (
         Index('idx_uploads_state', 'state'),

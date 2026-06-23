@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 
+from app.core.time import utcnow
+
 
 class AlertSeverity(str, Enum):
     """告警严重程度"""
@@ -182,7 +184,7 @@ class AlertingService:
                             severity=rule.severity,
                             status=AlertStatus.FIRING,
                             message=rule.description,
-                            triggered_at=datetime.utcnow(),
+                            triggered_at=utcnow(),
                             metadata={
                                 "threshold": rule.threshold,
                                 "duration_seconds": rule.duration_seconds,
@@ -197,7 +199,7 @@ class AlertingService:
                     if rule.name in self.active_alerts:
                         alert = self.active_alerts[rule.name]
                         alert.status = AlertStatus.RESOLVED
-                        alert.resolved_at = datetime.utcnow()
+                        alert.resolved_at = utcnow()
                         del self.active_alerts[rule.name]
 
             except Exception:

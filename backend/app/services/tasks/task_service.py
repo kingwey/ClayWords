@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import RedisClient, get_redis
+from app.core.time import utcnow
 from app.db.session import async_session_maker
 from app.models.entities import Task as TaskModel
 
@@ -63,7 +64,7 @@ class TaskService:
         if task_id is None:
             task_id = str(uuid.uuid4())
 
-        now = datetime.utcnow()
+        now = utcnow()
 
         # 1. Persist to PostgreSQL
         async with async_session_maker() as session:
@@ -149,7 +150,7 @@ class TaskService:
         error_message: Optional[str] = None,
     ) -> Optional[TaskInfo]:
         """Update task state in both Redis and PostgreSQL"""
-        now = datetime.utcnow()
+        now = utcnow()
 
         # 1. Update PostgreSQL
         async with async_session_maker() as session:
@@ -172,6 +173,10 @@ class TaskService:
             await session.commit()
 
             payload = task.payload
+
+        # Metrics: 记录任务状态更新
+        from app.core.metrics import metrics
+        metrics.increment_task(state)
 
         # 2. Update Redis cache
         await self._cache_task_state(
@@ -207,7 +212,7 @@ class TaskService:
         2. publish 到 Pub/Sub，body 内携带该 id
         前端 SSE 用 id 在 history 与 live 之间去重，避免重复或丢失（详见 api/tasks.py）。
         """
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = utcnow().isoformat()
         # 1. Stream 入库（用于 Last-Event-ID 回放）
         event_id = await self.redis.xadd(
             f"task:{task_id}:events",
@@ -273,7 +278,7 @@ class TaskService:
             "progress": progress,
             "result_uri": result_uri,
             "error_message": error_message,
-            "updated_at": datetime.utcnow().isoformat(),
+            "updated_at": utcnow().isoformat(),
         }
         await self.redis.set(
             f"task:{task_id}:state",
