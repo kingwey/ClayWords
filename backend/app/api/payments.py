@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime
+from app.core.time import utcnow
 
 from app.api.auth import get_current_user, UserInfo
 from app.db.session import get_session
@@ -173,7 +174,7 @@ async def payment_callback(
             "trade_status": trade_status,
             "total_amount": total_amount,
         },
-        expires_at=datetime.utcnow() + _td(days=7),
+        expires_at=utcnow() + _td(days=7),
     )
     session.add(idem_key)
 
@@ -192,12 +193,17 @@ async def payment_callback(
         if order.status in ["pending", "confirmed"]:
             # 状态迁移：pending/confirmed → paid (使用 dispatched 代替)
             order.status = "dispatched"  # 已支付，进入派单流程
-            order.updated_at = datetime.utcnow()
+            order.updated_at = utcnow()
+
+            # Metrics: 记录支付成功
+            from app.core.metrics import metrics
+            metrics.increment_payment("success")
+            metrics.increment_order("dispatched")
 
             # 可选：记录支付信息到订单
             # order.payment_trade_no = trade_no
             # order.paid_amount = float(total_amount)
-            # order.paid_at = datetime.utcnow()
+            # order.paid_at = utcnow()
 
     await session.commit()
 
@@ -264,7 +270,7 @@ async def refund_payment(
         if refund_result.get("success"):
             # 更新订单状态
             order.status = "refunding"
-            order.updated_at = datetime.utcnow()
+            order.updated_at = utcnow()
             await session.commit()
 
             return {

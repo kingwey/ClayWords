@@ -251,9 +251,13 @@ async def confirm_option(
         reason="Order created from design confirmation"
     )
     session.add(order_log)
-    
+
     await session.flush()
-    
+
+    # Metrics: 记录订单创建
+    from app.core.metrics import metrics
+    metrics.increment_order("pending")
+
     return ConfirmResponse(
         order_id=order.order_id,
         idempotency_key=order.idempotency_key

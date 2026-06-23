@@ -146,6 +146,10 @@ async def dispatch_to_studio(
         )
         await db.flush()
 
+        # Metrics: 记录派单成功
+        from app.core.metrics import metrics
+        metrics.increment_order("dispatched_to_studio")
+
         return DispatchResult(
             dispatched=True,
             studio_id=studio_info.studio_id,
