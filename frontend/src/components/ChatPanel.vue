@@ -59,12 +59,27 @@
         @input="emit('update:inputText', ($event.target as HTMLTextAreaElement).value)"
         @keydown.enter.ctrl="emit('send')"
       ></textarea>
-      <button class="send-btn" @click="emit('send')" :disabled="sending">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 2L11 13" />
-          <path d="M22 2l-7 20-4-9-9-4 20-7z" />
-        </svg>
-      </button>
+      <div class="input-actions">
+        <button
+          class="generate3d-btn"
+          @click="emit('generate3d')"
+          :disabled="sending"
+          title="使用 Hunyuan3D 生成真实 3D 模型"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
+          3D
+        </button>
+        <button class="send-btn" @click="emit('send')" :disabled="sending">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 2L11 13" />
+            <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+          </svg>
+        </button>
+      </div>
     </div>
   </aside>
 </template>
@@ -88,6 +103,7 @@ const emit = defineEmits<{
   (e: 'select-option', opt: Option): void
   (e: 'apply-tweak', text: string): void
   (e: 'send'): void
+  (e: 'generate3d'): void
   (e: 'update:inputText', value: string): void
   (e: 'update:showTweakPanel', value: boolean): void
 }>()
@@ -324,6 +340,43 @@ watch(
 }
 .input-textarea::placeholder {
   color: var(--color-text-muted);
+}
+
+.input-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.generate3d-btn {
+  width: 60px;
+  height: 48px;
+  min-width: 60px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: all 0.2s;
+  font-size: 11px;
+  font-weight: 600;
+}
+.generate3d-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.generate3d-btn:not(:disabled):hover {
+  background: rgba(201, 123, 90, 0.08);
+  border-color: var(--color-accent);
+  transform: translateY(-1px);
+}
+.generate3d-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .send-btn {

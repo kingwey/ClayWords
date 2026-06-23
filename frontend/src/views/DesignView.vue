@@ -31,6 +31,7 @@
         @select-option="selectOption"
         @apply-tweak="applyTweak"
         @send="sendUserMessage"
+        @generate3d="generate3D"
       />
 
       <!-- 中：三方案卡片 -->
@@ -75,6 +76,18 @@
 
     <!-- 工单弹窗 -->
     <WorkOrderPopup v-model="workorderVisible" :order-info="currentOrderInfo" />
+
+    <!-- Hunyuan3D 进度弹窗 -->
+    <Hunyuan3DProgress
+      :visible="showHunyuanProgress"
+      :state="taskState.state"
+      :progress="taskState.progress"
+      :message="taskState.message"
+      :error="taskState.error"
+      @close="handleHunyuanClose"
+      @retry="handleHunyuanRetry"
+      @fallback="handleHunyuanFallback"
+    />
   </div>
 </template>
 
@@ -85,8 +98,10 @@ import OptionCards from '@/components/OptionCards.vue'
 import PreviewCanvas from '@/components/PreviewCanvas.vue'
 import DispatchPanel from '@/components/DispatchPanel.vue'
 import WorkOrderPopup from '@/components/WorkOrderPopup.vue'
+import Hunyuan3DProgress from '@/components/Hunyuan3DProgress.vue'
 import { usePreviewRotation } from '@/composables/usePreviewRotation'
 import { useDesignVersions } from '@/composables/useDesignVersions'
+import { useHunyuan3D } from '@/composables/useHunyuan3D'
 import { GLAZE_OPTIONS, GLAZE_PALETTE_MAP } from '@/constants/glaze'
 import type { Message, Option } from '@/types/design'
 
@@ -98,9 +113,16 @@ const options = ref<Option[]>([])
 const selectedOptionId = ref<string | null>(null)
 const showTweakPanel = ref(false)
 const currentGlaze = ref('冷白釉')
+
 // 3D 预览的旋转/拖拽/auto-rotate 已抽到 composable
 const preview = usePreviewRotation()
 const { rotateX, rotateY, autoRotate } = preview
+
+// Hunyuan3D 3D 生成
+const hunyuan = useHunyuan3D()
+const { taskState, submitTask, reset: resetHunyuan } = hunyuan
+const showHunyuanProgress = ref(false)
+
 const dispatchVisible = ref(false)
 const workorderVisible = ref(false)
 
@@ -344,6 +366,71 @@ async function sendUserMessage() {
     )
     sending.value = false
   }, 1800)
+}
+
+// Hunyuan3D 3D 生成
+async function generate3D() {
+  if (!inputText.value.trim()) {
+    return
+  }
+
+  showHunyuanProgress.value = true
+
+  try {
+    await submitTask({
+      Prompt: inputText.value,
+      Model: '3.1'
+    })
+  } catch (error) {
+    console.error('Submit 3D task failed:', error)
+  }
+}
+
+// 监听任务完成
+watch(() => taskState.value.state, (newState) => {
+  if (newState === 'completed' && taskState.value.glbUrl) {
+    // 将生成的 GLB 添加到方案列表
+    const newOption: Option = {
+      id: `opt-hunyuan-${Date.now()}`,
+      idx: '🎨',
+      name: 'AI 生成 3D',
+      desc: `根据「${inputText.value.slice(0, 30)}...」生成的 3D 模型`,
+      glaze: currentGlaze.value,
+      size: '待工艺校验',
+      days: 7,
+      price: 0,
+      tags: ['Hunyuan3D', 'AI生成'],
+      type: 'custom',
+      colors: { light: '#f5f0e8', mid: '#ece0d0', dark: '#b8a08a' },
+      glbUrl: taskState.value.glbUrl,
+      thumbnailUrl: taskState.value.thumbnailUrl || undefined
+    }
+
+    options.value.push(newOption)
+    selectedOptionId.value = newOption.id
+
+    addAiMessage(`<strong>陶语 · Hunyuan3D 生成完成</strong><br/>
+      已为您生成 3D 模型,请在右侧预览中查看。<br/>
+      <em style="color:#8a7d6f;font-size:12px;">注意: AI 生成的模型需要人工工艺校验后才能烧制。</em>`)
+  }
+})
+
+function handleHunyuanClose() {
+  showHunyuanProgress.value = false
+  if (taskState.value.state === 'completed') {
+    resetHunyuan()
+  }
+}
+
+function handleHunyuanRetry() {
+  generate3D()
+}
+
+function handleHunyuanFallback() {
+  showHunyuanProgress.value = false
+  resetHunyuan()
+  // 使用默认方案生成流程
+  sendUserMessage()
 }
 
 function applyTweak(text: string) {
