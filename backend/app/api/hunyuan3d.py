@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.db import get_session
-from app.core.auth import get_current_user, UserInfo
+from app.db.session import get_session
+from app.api.auth import get_current_user, UserInfo
 from app.core.config import settings
 from app.services.hunyuan3d.client import hunyuan3d_client
 from app.services.hunyuan3d.schemas import SubmitRequest
