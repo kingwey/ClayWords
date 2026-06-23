@@ -65,11 +65,10 @@ const router = createRouter({
 
 // 全局路由守卫：登录校验 + 角色权限
 router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('access_token')
   const role = localStorage.getItem('role') || ''
 
-  // 需要登录但未登录 → 跳转登录页
-  if (to.meta.requiresAuth && !token) {
+  // 需要登录但未登录（role 为空表示未登录）→ 跳转登录页
+  if (to.meta.requiresAuth && !role) {
     next({ name: 'login', query: { redirect: to.fullPath } })
     return
   }

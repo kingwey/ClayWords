@@ -1,7 +1,6 @@
 """Authentication API with Real Implementation"""
 
-from fastapi import APIRouter, HTTPException, Depends, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import APIRouter, HTTPException, Depends, status, Cookie, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -14,7 +13,6 @@ from app.services.auth import create_access_token, create_refresh_token, verify_
 
 
 router = APIRouter()
-security = HTTPBearer()
 
 
 class LoginRequest(BaseModel):
@@ -23,9 +21,7 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
+    """登录响应 - token 通过 HttpOnly cookie 传输"""
     role: str = "user"
 
 
@@ -34,10 +30,6 @@ class UserInfo(BaseModel):
     phone: str
     role: str
     studio_id: str | None = None
-
-
-class RefreshRequest(BaseModel):
-    refresh_token: str
 
 
 # 仅在非生产环境启用的演示账号；生产环境应接入真实短信验证码
@@ -49,17 +41,22 @@ DEMO_ACCOUNTS = {
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    access_token: str = Cookie(None),
     session: AsyncSession = Depends(get_session)
 ) -> UserInfo:
-    """从 JWT 提取用户身份。
+    """从 Cookie 中的 JWT 提取用户身份。
 
-    优化路径：登录/刷新时已把 role 编进 claim，多数请求无需查库。
-    旧 token（无 role claim）回退查库一次。手机号脱敏只在必须时解密，
-    避免每个受保护请求都跑 AES-GCM。
+    HttpOnly cookie 传输，JavaScript 无法读取，防御 XSS 窃取 token。
+    登录/刷新时已把 role 编进 claim，多数请求无需查库。
+    旧 token（无 role claim）回退查库一次。
     """
-    token = credentials.credentials
-    payload = verify_token(token, "access")
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authentication cookie"
+        )
+
+    payload = verify_token(access_token, "access")
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -116,6 +113,7 @@ def require_role(*roles: str):
 @router.post("/login", response_model=LoginResponse)
 async def login(
     request: LoginRequest,
+    response: Response,
     session: AsyncSession = Depends(get_session)
 ):
     if len(request.code) != 6 or not request.code.isdigit():
@@ -180,19 +178,40 @@ async def login(
     })
     refresh_token = create_refresh_token({"sub": user_id})
 
-    return LoginResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        role=user_role
+    # 写入 HttpOnly cookie，防止 XSS 窃取
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=settings.is_production,  # 生产强制 HTTPS
+        samesite="lax",
+        max_age=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=settings.is_production,
+        samesite="lax",
+        max_age=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 86400
+    )
+
+    return LoginResponse(role=user_role)
 
 
 @router.post("/refresh", response_model=LoginResponse)
 async def refresh_token(
-    request: RefreshRequest,
+    refresh_token: str = Cookie(None),
+    response: Response = None,
     session: AsyncSession = Depends(get_session),
 ):
-    payload = verify_token(request.refresh_token, "refresh")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing refresh token cookie"
+        )
+
+    payload = verify_token(refresh_token, "refresh")
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -217,11 +236,33 @@ async def refresh_token(
     })
     new_refresh_token = create_refresh_token({"sub": user_id})
 
-    return LoginResponse(
-        access_token=access_token,
-        refresh_token=new_refresh_token,
-        role=user_role,
+    # 更新 cookie
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=settings.is_production,
+        samesite="lax",
+        max_age=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        secure=settings.is_production,
+        samesite="lax",
+        max_age=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 86400
+    )
+
+    return LoginResponse(role=user_role)
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """登出 - 清除 HttpOnly cookie"""
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
+    return {"message": "Logged out successfully"}
 
 
 @router.get("/user", response_model=UserInfo)
