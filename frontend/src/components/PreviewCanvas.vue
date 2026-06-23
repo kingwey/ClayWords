@@ -7,8 +7,16 @@
 
     <div class="preview-stage-wrapper">
       <div class="preview-stage" ref="stageEl">
-        <!-- 陶瓷 3D 视觉（CSS 旋转） -->
-        <div class="ceramic-3d" :style="{ transform: `rotateY(${rotateY}deg) rotateX(${rotateX}deg)` }">
+        <!-- Three.js GLB 渲染器 (优先,当存在 glbUrl 时) -->
+        <ThreeViewer
+          v-if="currentOption?.glbUrl"
+          :glb-url="currentOption.glbUrl"
+          :auto-rotate="autoRotate"
+          class="three-viewer-container"
+        />
+
+        <!-- CSS 陶瓷 3D 视觉 (fallback,无 glbUrl 时) -->
+        <div v-else class="ceramic-3d" :style="{ transform: `rotateY(${rotateY}deg) rotateX(${rotateX}deg)` }">
           <div class="ceramic-body" :style="ceramicBodyStyle">
             <div class="ceramic-gloss"></div>
             <div class="ceramic-shadow"></div>
@@ -128,6 +136,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import ThreeViewer from './ThreeViewer.vue'
 import type { Option, GlazeOption } from '@/types/design'
 import type { DesignVersion } from '@/composables/useDesignVersions'
 
@@ -230,6 +239,15 @@ defineExpose({ stageEl })
   width: 70%;
   height: 70%;
   pointer-events: none;
+}
+
+.three-viewer-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
 }
 
 .ceramic-3d {
