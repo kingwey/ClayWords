@@ -120,9 +120,8 @@ function handleViewPDF() {
     || `/api/v1/orders/${props.orderInfo.orderId}/workorder.html`
   emit('viewPDF', url)
 
-  // 带 token 直接 open 会丢 Authorization；这里用 fetch 取回 blob 再开新窗口
-  const token = localStorage.getItem('access_token') || ''
-  fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  // cookie 自动携带 token，无需手动拼 Authorization header
+  fetch(url, { credentials: 'include' })
     .then(r => {
       if (!r.ok) throw new Error(String(r.status))
       return r.blob()

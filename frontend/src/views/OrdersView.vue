@@ -247,9 +247,7 @@ async function fetchOrders() {
     }
 
     const response = await fetch(`/api/v1/orders?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-      }
+      credentials: 'include'  // cookie 自动携带 token
     })
 
     if (!response.ok) throw new Error('Failed to fetch orders')
