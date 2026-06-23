@@ -30,7 +30,8 @@ scrape_configs:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: []  # Add Alertmanager URLs here when configured
+        - targets: ['alertmanager:9093']  # Docker Compose 内部网络
+      timeout: 10s
 
 # Rule files
 rule_files:

@@ -1,0 +1,134 @@
+# Alertmanager 配置 - 告警分级路由
+# P0 → 电话/短信, P1 → 飞书, P2 → 邮件
+
+global:
+  resolve_timeout: 5m
+  # 飞书 webhook (需替换为真实 URL)
+  feishu_api_url: 'https://open.feishu.cn/open-apis/bot/v2/hook/YOUR_WEBHOOK_TOKEN'
+
+# 路由树
+route:
+  receiver: 'default'
+  group_by: ['alertname', 'severity']
+  group_wait: 10s        # 首次告警等待聚合时间
+  group_interval: 5m     # 同组后续告警间隔
+  repeat_interval: 4h    # 重复发送间隔
+
+  routes:
+    # P0 路由 - 电话 + 短信 + 飞书
+    - match:
+        severity: P0
+      receiver: 'p0-critical'
+      group_wait: 5s       # P0 快速响应,仅等 5s
+      repeat_interval: 30m # P0 更频繁提醒
+
+    # P1 路由 - 飞书
+    - match:
+        severity: P1
+      receiver: 'p1-feishu'
+      repeat_interval: 2h
+
+    # P2 路由 - 邮件
+    - match:
+        severity: P2
+      receiver: 'p2-email'
+      repeat_interval: 12h
+
+# 接收器定义
+receivers:
+  # 默认接收器(不应触发,仅兜底)
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://localhost:9093/debug'
+
+  # P0 关键告警 - 多通道
+  - name: 'p0-critical'
+    # 1. 电话告警(腾讯云/阿里云语音通知)
+    webhook_configs:
+      - url: 'https://api.YOUR-SMS-PROVIDER.com/call'
+        send_resolved: false
+        http_config:
+          bearer_token: 'YOUR_SMS_API_KEY'
+        # 请求体模板
+        # {
+        #   "phone": "+86138XXXX",
+        #   "template": "claywords_p0_alert",
+        #   "params": {
+        #     "alert_name": "{{ .GroupLabels.alertname }}",
+        #     "summary": "{{ .CommonAnnotations.summary }}"
+        #   }
+        # }
+
+    # 2. 短信告警
+    webhook_configs:
+      - url: 'https://api.YOUR-SMS-PROVIDER.com/sms'
+        send_resolved: true
+        http_config:
+          bearer_token: 'YOUR_SMS_API_KEY'
+
+    # 3. 飞书机器人(卡片消息)
+    webhook_configs:
+      - url: '{{ .GlobalConfig.feishu_api_url }}'
+        send_resolved: true
+        http_config:
+          headers:
+            Content-Type: application/json
+        # 飞书卡片模板(需自定义)
+        # {
+        #   "msg_type": "interactive",
+        #   "card": {
+        #     "header": {
+        #       "title": { "tag": "plain_text", "content": "🚨 P0 Critical Alert" },
+        #       "template": "red"
+        #     },
+        #     "elements": [
+        #       { "tag": "div", "text": { "tag": "lark_md", "content": "**{{ .CommonAnnotations.summary }}**" } },
+        #       { "tag": "div", "text": { "tag": "plain_text", "content": "{{ .CommonAnnotations.description }}" } }
+        #     ]
+        #   }
+        # }
+
+  # P1 重要告警 - 飞书
+  - name: 'p1-feishu'
+    webhook_configs:
+      - url: '{{ .GlobalConfig.feishu_api_url }}'
+        send_resolved: true
+        http_config:
+          headers:
+            Content-Type: application/json
+
+  # P2 次要告警 - 邮件
+  - name: 'p2-email'
+    email_configs:
+      - to: 'ops@claywords.com'
+        from: 'alertmanager@claywords.com'
+        smarthost: 'smtp.exmail.qq.com:465'
+        auth_username: 'alertmanager@claywords.com'
+        auth_password: 'YOUR_SMTP_PASSWORD'
+        require_tls: true
+        headers:
+          Subject: '[ClayWords P2] {{ .GroupLabels.alertname }}'
+        html: |
+          <h2>{{ .CommonAnnotations.summary }}</h2>
+          <p><strong>描述:</strong> {{ .CommonAnnotations.description }}</p>
+          <p><strong>级别:</strong> {{ .GroupLabels.severity }}</p>
+          <p><strong>类别:</strong> {{ .GroupLabels.category }}</p>
+          <p><strong>Runbook:</strong> <a href="{{ .CommonAnnotations.runbook }}">{{ .CommonAnnotations.runbook }}</a></p>
+          <hr>
+          <p><em>触发时间: {{ .StartsAt }}</em></p>
+
+# 抑制规则
+inhibit_rules:
+  # P0 触发时抑制同告警的 P1/P2
+  - source_match:
+      severity: 'P0'
+    target_match_re:
+      severity: 'P1|P2'
+    equal: ['alertname', 'instance']
+
+  # P1 触发时抑制同告警的 P2
+  - source_match:
+      severity: 'P1'
+    target_match:
+      severity: 'P2'
+    equal: ['alertname', 'instance']

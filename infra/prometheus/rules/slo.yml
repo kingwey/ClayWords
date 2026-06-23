@@ -1,0 +1,189 @@
+# ClayWords SLO 告警规则
+# 基于 next-steps P1-5 定义的 SLO 指标
+
+groups:
+  - name: slo_availability
+    interval: 30s
+    rules:
+      # ===== P0 告警 - 影响核心服务可用性 =====
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m]))
+          > 0.005
+        for: 2m
+        labels:
+          severity: P0
+          category: availability
+        annotations:
+          summary: "HTTP 5xx 错误率超过 0.5% (SLO: 99.5%)"
+          description: "过去 5 分钟 5xx 错误率 {{ $value | humanizePercentage }},已持续 {{ $labels.for }}"
+          runbook: "https://docs.claywords.com/runbooks/high-error-rate"
+
+      - alert: ServiceDown
+        expr: up{job="claywords-backend"} == 0
+        for: 1m
+        labels:
+          severity: P0
+          category: availability
+        annotations:
+          summary: "Backend 服务不可达"
+          description: "{{ $labels.instance }} 已离线超过 1 分钟"
+          runbook: "https://docs.claywords.com/runbooks/service-down"
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          db_pool_size - db_pool_available_connections < 2
+        for: 1m
+        labels:
+          severity: P0
+          category: availability
+        annotations:
+          summary: "数据库连接池即将耗尽"
+          description: "可用连接数 {{ $value }},池大小 {{ $labels.pool_size }}"
+          runbook: "https://docs.claywords.com/runbooks/db-pool"
+
+  - name: slo_latency
+    interval: 30s
+    rules:
+      # ===== P1 告警 - 性能劣化但服务可用 =====
+
+      - alert: HighLatencyP99
+        expr: |
+          histogram_quantile(0.99,
+            rate(http_request_duration_ms_bucket[5m])
+          ) > 800
+        for: 5m
+        labels:
+          severity: P1
+          category: latency
+        annotations:
+          summary: "API p99 延迟超过 800ms (SLO: <800ms)"
+          description: "p99 延迟 {{ $value }}ms,已持续 5 分钟"
+          runbook: "https://docs.claywords.com/runbooks/high-latency"
+
+      - alert: SlowDatabaseQueries
+        expr: |
+          rate(db_query_duration_ms_sum[5m])
+          /
+          rate(db_query_duration_ms_count[5m])
+          > 200
+        for: 5m
+        labels:
+          severity: P1
+          category: latency
+        annotations:
+          summary: "数据库平均查询时间超过 200ms"
+          description: "平均查询耗时 {{ $value }}ms"
+
+  - name: slo_business
+    interval: 1m
+    rules:
+      # ===== P1 告警 - 业务指标异常 =====
+
+      - alert: LowPaymentSuccessRate
+        expr: |
+          sum(rate(payments_total{status="success"}[10m]))
+          /
+          sum(rate(payments_total[10m]))
+          < 0.99
+        for: 5m
+        labels:
+          severity: P1
+          category: business
+        annotations:
+          summary: "支付成功率低于 99% (SLO: ≥99%)"
+          description: "过去 10 分钟支付成功率 {{ $value | humanizePercentage }}"
+          runbook: "https://docs.claywords.com/runbooks/payment-failure"
+
+      - alert: HighDispatchFailureRate
+        expr: |
+          sum(rate(dispatch_total{outcome=~"cas_failed|no_capacity"}[10m]))
+          /
+          sum(rate(dispatch_total[10m]))
+          > 0.10
+        for: 5m
+        labels:
+          severity: P1
+          category: business
+        annotations:
+          summary: "派单失败率超过 10%"
+          description: "CAS 失败 + 无容量占比 {{ $value | humanizePercentage }}"
+          runbook: "https://docs.claywords.com/runbooks/dispatch-failure"
+
+      - alert: NoOrdersCreated
+        expr: |
+          rate(orders_total{status="pending"}[30m]) == 0
+        for: 30m
+        labels:
+          severity: P2
+          category: business
+        annotations:
+          summary: "过去 30 分钟无新订单创建"
+          description: "可能业务停滞或流量异常"
+
+  - name: resource_saturation
+    interval: 30s
+    rules:
+      # ===== P2 告警 - 资源接近饱和但未影响服务 =====
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 5m
+        labels:
+          severity: P2
+          category: resource
+        annotations:
+          summary: "内存使用率超过 85%"
+          description: "{{ $labels.instance }} 内存使用 {{ $value | humanizePercentage }}"
+
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: P2
+          category: resource
+        annotations:
+          summary: "CPU 使用率持续超过 80%"
+          description: "{{ $labels.instance }} CPU 使用 {{ $value }}%"
+
+      - alert: DiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.15
+        for: 5m
+        labels:
+          severity: P2
+          category: resource
+        annotations:
+          summary: "磁盘剩余空间低于 15%"
+          description: "{{ $labels.instance }} {{ $labels.mountpoint }} 剩余 {{ $value | humanizePercentage }}"
+
+  - name: sse_health
+    interval: 30s
+    rules:
+      # ===== SSE 连接健康度 =====
+
+      - alert: TooManySSEConnections
+        expr: active_sse_connections > 1000
+        for: 5m
+        labels:
+          severity: P1
+          category: resource
+        annotations:
+          summary: "SSE 活跃连接数超过 1000"
+          description: "当前 {{ $value }} 个连接,可能存在连接泄漏"
+
+      - alert: SSEConnectionsDropped
+        expr: |
+          rate(sse_disconnections_total[5m]) > 10
+        for: 3m
+        labels:
+          severity: P2
+          category: reliability
+        annotations:
+          summary: "SSE 连接频繁断开"
+          description: "过去 5 分钟平均每秒断开 {{ $value }} 个连接"
