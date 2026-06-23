@@ -57,6 +57,48 @@ export const authApi = {
   }
 }
 
+// ============ 文件上传 API ============
+
+export interface UploadInitResponse {
+  upload_id: string
+  object_key: string
+  presigned_url: string
+  expires_in: number
+}
+
+export interface UploadStatusResponse {
+  upload_id: string
+  state: string            // pending | scanning | clean | quarantined
+  scan_result: Record<string, unknown>
+  public_url: string | null
+}
+
+export const uploadApi = {
+  /** 初始化上传, 拿预签名 PUT URL */
+  init(payload: { file_name: string; file_size: number; mime_type: string; upload_type: string }) {
+    return client.post<UploadInitResponse>('/api/v1/uploads/init', payload)
+  },
+
+  /** 用预签名 URL 直传到 MinIO (不走 axios client, 避免带 cookie/baseURL) */
+  async putFile(presignedUrl: string, file: File) {
+    return fetch(presignedUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    })
+  },
+
+  /** 确认上传完成, 触发扫描 */
+  confirm(uploadId: string) {
+    return client.post(`/api/v1/uploads/${uploadId}/confirm`)
+  },
+
+  /** 查询上传状态 (clean 时返回 public_url) */
+  getStatus(uploadId: string) {
+    return client.get<UploadStatusResponse>(`/api/v1/uploads/${uploadId}`)
+  }
+}
+
 // ============ Hunyuan3D API ============
 
 export const hunyuan3dApi = {

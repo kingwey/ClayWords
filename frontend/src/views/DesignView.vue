@@ -55,6 +55,7 @@
         @apply-tweak="applyTweak"
         @send="sendUserMessage"
         @generate3d="generate3D"
+        @upload="onReferenceUpload"
       />
 
       <!-- 中：三方案卡片 -->
@@ -334,6 +335,13 @@ function addAiMessage(content: string, withOptions?: Option[], withDispatch?: bo
     options: withOptions,
     showDispatch: withDispatch
   })
+}
+
+// 已上传的参考图 (供后续生成时作为图生模型的输入)
+const referenceImageUrl = ref<string | null>(null)
+function onReferenceUpload(payload: { uploadId: string; url: string }) {
+  referenceImageUrl.value = payload.url
+  addAiMessage('已收到你的参考图 📎，我会参考它的造型与风格来生成方案。')
 }
 
 function addUserMessage(content: string) {
