@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, health, sessions, sse, tasks, options, orders, demo, uploads, studio_onboarding, studio_orders, payments, logistics, metrics, alerts
+from app.api import auth, health, sessions, sse, tasks, options, orders, demo, uploads, studio_onboarding, studio_orders, payments, logistics, metrics, alerts, hunyuan3d
 from app.core.config import settings
 from app.core.redis import redis_client
 from app.core.storage import minio_client
@@ -123,4 +123,5 @@ app.include_router(studio_onboarding.router, prefix="/api/v1", tags=["studio-onb
 app.include_router(studio_orders.router, prefix="/api/v1", tags=["studio-orders"])
 app.include_router(payments.router, prefix="/api/v1", tags=["payments"])
 app.include_router(logistics.router, prefix="/api/v1", tags=["logistics"])
+app.include_router(hunyuan3d.router, prefix="/api/v1", tags=["hunyuan3d"])
 app.include_router(demo.router, prefix="/api/v1", tags=["demo"])

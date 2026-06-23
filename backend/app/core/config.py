@@ -72,6 +72,13 @@ class Settings(BaseSettings):
     # 中央兜底工作室（派单 fallback 时使用）。生产环境通过环境变量注入实际 ID
     CENTRAL_STUDIO_ID: str = ""
 
+    # Hunyuan3D
+    HUNYUAN3D_API_KEY: str = ""
+    HUNYUAN3D_BASE_URL: str = "https://api.ai3d.cloud.tencent.com"
+    HUNYUAN3D_POLL_INTERVAL: int = 5  # 轮询间隔（秒）
+    HUNYUAN3D_MAX_POLL_ATTEMPTS: int = 120  # 最大轮询次数（10 分钟）
+    ENABLE_HUNYUAN3D: bool = True  # 功能开关
+
     @property
     def is_production(self) -> bool:
         """是否生产环境"""
