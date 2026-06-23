@@ -50,66 +50,75 @@
       </div>
     </div>
 
-    <!-- 输入区域 -->
+    <!-- 输入区域 (卡片式: 上方文本框 + 下方工具栏) -->
     <div class="chat-input-container">
-      <!-- 快捷功能行 -->
-      <div class="quick-actions">
-        <button class="quick-action-btn" title="快速示例">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-          </svg>
-          <span>快速</span>
-        </button>
-        <button class="quick-action-btn" title="上传参考图">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <path d="M21 15l-5-5L5 21" />
-          </svg>
-          <span>参考图</span>
-        </button>
-        <button class="quick-action-btn" title="工艺说明">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 16v-4M12 8h.01" />
-          </svg>
-          <span>工艺库</span>
-        </button>
-        <button class="quick-action-btn" title="历史方案">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>历史</span>
-        </button>
-      </div>
+      <!-- 文本输入 (整行) -->
+      <textarea
+        :value="inputText"
+        class="input-textarea"
+        placeholder="发消息或按住空格说话... 例如：送给妈妈的生日礼物，属兔，喜欢月亮桂花，冷白釉"
+        @input="emit('update:inputText', ($event.target as HTMLTextAreaElement).value)"
+        @keydown.enter.ctrl="emit('send')"
+      ></textarea>
 
-      <!-- 输入框 -->
-      <div class="chat-input">
-        <textarea
-          :value="inputText"
-          class="input-textarea"
-          placeholder="发消息或按住空格说话... 例如：送给妈妈的生日礼物，属兔，喜欢月亮桂花，冷白釉"
-          @input="emit('update:inputText', ($event.target as HTMLTextAreaElement).value)"
-          @keydown.enter.ctrl="emit('send')"
-        ></textarea>
-        <div class="input-actions">
+      <!-- 底部工具栏 -->
+      <div class="input-toolbar">
+        <!-- 左侧: 功能图标 -->
+        <div class="toolbar-left">
+          <button class="tool-icon" title="快速示例">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="3" />
+              <path d="M9 8l3 4-3 4" />
+            </svg>
+          </button>
+          <button class="tool-icon" title="上传参考图">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.44 11.05l-9.19 9.19a5 5 0 01-7.07-7.07l9.19-9.19a3 3 0 014.24 4.24l-9.2 9.19a1 1 0 01-1.41-1.41l8.49-8.49" />
+            </svg>
+          </button>
+          <span class="tool-divider"></span>
           <button
-            class="generate3d-btn"
-            @click="emit('generate3d')"
-            :disabled="sending"
+            class="tool-mode"
+            :class="{ active: turboMode }"
+            title="速通模式：跳过细化，直接出方案"
+            @click="turboMode = !turboMode"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+            <span>速通</span>
+          </button>
+        </div>
+
+        <!-- 右侧: 模型 + 语音 + 发送 -->
+        <div class="toolbar-right">
+          <button class="model-select" title="切换生成方式">
+            <span>陶语 · 智能匹配</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          <button
+            class="tool-icon"
             title="使用 Hunyuan3D 生成真实 3D 模型"
+            :disabled="sending"
+            @click="emit('generate3d')"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
               <path d="M2 17l10 5 10-5" />
               <path d="M2 12l10 5 10-5" />
             </svg>
-            3D
           </button>
-          <button class="send-btn" @click="emit('send')" :disabled="sending">
+          <button class="tool-icon" title="语音输入">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 2L11 13" />
-              <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+              <rect x="9" y="2" width="6" height="12" rx="3" />
+              <path d="M5 10a7 7 0 0014 0M12 19v3" />
+            </svg>
+          </button>
+          <button class="send-btn" @click="emit('send')" :disabled="sending || !inputText.trim()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 19V5M5 12l7-7 7 7" />
             </svg>
           </button>
         </div>
@@ -143,6 +152,9 @@ const emit = defineEmits<{
 }>()
 
 const chatMessages = ref<HTMLElement | null>(null)
+
+// 速通模式开关 (UI 态; 是否真的跳过细化由父组件 send 时读取)
+const turboMode = ref(false)
 
 // 消息追加后自动滚到底部（原 scrollToBottom 逻辑下沉到组件内部）
 watch(
@@ -361,77 +373,138 @@ watch(
   box-shadow: 0 4px 16px rgba(45, 74, 72, 0.08);
 }
 
-/* ========= 输入栏 ========= */
-.chat-input {
-  padding: 14px 14px 12px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  background: transparent;
-}
-
+/* 文本输入 (整行) */
 .input-textarea {
-  flex: 1;
-  min-height: 48px;
-  max-height: 140px;
-  padding: 10px 12px;
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  max-height: 160px;
+  padding: 16px 18px 6px;
   font-size: 14px;
   font-family: inherit;
   line-height: 1.6;
   border: none;
-  border-radius: 10px;
   background: transparent;
   color: var(--color-text-primary);
   resize: none;
   outline: none;
+  box-sizing: border-box;
 }
 .input-textarea::placeholder {
   color: var(--color-text-muted);
 }
 
-.input-actions {
+/* ========= 底部工具栏 ========= */
+.input-toolbar {
   display: flex;
-  gap: 6px;
-  align-items: flex-end;
-  padding-bottom: 2px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 10px;
+  gap: 8px;
 }
 
-.generate3d-btn {
-  width: 52px;
-  height: 40px;
-  min-width: 52px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-accent);
-  cursor: pointer;
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 圆角图标按钮 */
+.tool-icon {
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  transition: all 0.2s;
-  font-size: 10px;
-  font-weight: 600;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
 }
-.generate3d-btn:disabled {
-  opacity: 0.5;
+.tool-icon:hover:not(:disabled) {
+  background: rgba(45, 74, 72, 0.07);
+  color: var(--color-primary);
+}
+.tool-icon:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
-.generate3d-btn:not(:disabled):hover {
-  background: rgba(201, 123, 90, 0.08);
-  border-color: var(--color-accent);
-  transform: translateY(-1px);
-}
-.generate3d-btn svg {
-  width: 16px;
-  height: 16px;
+.tool-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
+/* 竖向分隔线 */
+.tool-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
+  margin: 0 4px;
+}
+
+/* 速通模式开关 */
+.tool-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tool-mode svg {
+  width: 15px;
+  height: 15px;
+}
+.tool-mode:hover {
+  background: rgba(45, 74, 72, 0.06);
+}
+.tool-mode.active {
+  color: var(--color-success, #5b8a72);
+}
+.tool-mode.active svg {
+  color: var(--color-success, #5b8a72);
+}
+
+/* 模型/方式选择 */
+.model-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.model-select:hover {
+  background: rgba(45, 74, 72, 0.06);
+  color: var(--color-primary);
+}
+.model-select svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 发送按钮 (突出) */
 .send-btn {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
   border-radius: 10px;
   border: none;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
@@ -440,60 +513,22 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  margin-left: 4px;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(45, 74, 72, 0.2);
+  box-shadow: 0 2px 8px rgba(45, 74, 72, 0.25);
 }
 .send-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  box-shadow: none;
 }
 .send-btn:not(:disabled):hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(45, 74, 72, 0.3);
+  box-shadow: 0 4px 12px rgba(45, 74, 72, 0.35);
 }
 .send-btn svg {
   width: 18px;
   height: 18px;
-}
-
-/* ========= 快捷功能行 ========= */
-.quick-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--color-border-light);
-  background: rgba(0, 0, 0, 0.015);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.quick-actions::-webkit-scrollbar {
-  display: none;
-}
-
-.quick-action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  transition: all 0.15s;
-}
-.quick-action-btn:hover {
-  background: rgba(45, 74, 72, 0.06);
-  color: var(--color-primary);
-}
-.quick-action-btn svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
 }
 
 /* Scrollbar */
