@@ -13,6 +13,17 @@
         <div class="header-right">
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/orders" class="nav-link">我的订单</router-link>
+
+          <!-- 已登录: 用户昵称徽标 -->
+          <router-link
+            v-if="auth.isAuthenticated"
+            to="/profile"
+            class="user-chip"
+            title="个人资料"
+          >
+            <span class="avatar">{{ avatarLetter }}</span>
+            <span class="user-name">{{ auth.displayName }}</span>
+          </router-link>
         </div>
       </div>
     </header>
@@ -104,6 +115,18 @@ import { useDesignVersions } from '@/composables/useDesignVersions'
 import { useHunyuan3D } from '@/composables/useHunyuan3D'
 import { GLAZE_OPTIONS, GLAZE_PALETTE_MAP } from '@/constants/glaze'
 import type { Message, Option } from '@/types/design'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+
+// 头像字母: 昵称首字 → 脱敏手机号末位 → 兜底"陶"
+const avatarLetter = computed(() => {
+  if (auth.nickname) return auth.nickname.slice(0, 1).toUpperCase()
+  const digits = auth.phone.replace(/\D/g, '')
+  if (digits.length > 0) return digits.slice(-1)
+  const name = auth.displayName
+  return name ? name.slice(0, 1).toUpperCase() : '陶'
+})
 
 const previewRef = ref<InstanceType<typeof PreviewCanvas> | null>(null)
 const messages = ref<Message[]>([])
@@ -487,6 +510,9 @@ const currentOrderInfo = computed(() => {
 })
 
 onMounted(() => {
+  // 拉取登录用户资料 (昵称徽标显示用; 内部去重)
+  auth.fetchUser()
+
   // 初始欢迎 + 示例流程
   addAiMessage(`<strong>你好呀，我是陶语 👋</strong><br/>
     把你想要的陶瓷用自然语言描述给我，我帮你生成可直接下单烧制的方案。<br/>
@@ -581,6 +607,7 @@ watch(selectedOptionId, (id) => {
 }
 .header-right {
   display: flex;
+  align-items: center;
   gap: 24px;
 }
 .nav-link {
@@ -591,6 +618,45 @@ watch(selectedOptionId, (id) => {
 }
 .nav-link:hover {
   color: var(--color-primary);
+}
+
+/* 用户昵称徽标 */
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  background: rgba(45, 74, 72, 0.06);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-full, 999px);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.user-chip:hover {
+  background: rgba(45, 74, 72, 0.1);
+  border-color: var(--color-primary-light, #6b8a72);
+}
+.user-chip .avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-family-mono, monospace);
+}
+.user-chip .user-name {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono, monospace);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ========= 三栏布局 ========= */
