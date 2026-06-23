@@ -5,20 +5,30 @@
       <div class="nav-links">
         <router-link to="/studio">订单</router-link>
       </div>
-      <el-button text @click="handleLogout">退出登录</el-button>
+      <div class="nav-user">
+        <span v-if="auth.displayName" class="user-name">{{ auth.displayName }}</span>
+        <el-button text @click="handleLogout" style="color: #fff">退出登录</el-button>
+      </div>
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-function handleLogout() {
-  auth.clearAuth()
+onMounted(() => {
+  auth.fetchUser()
+})
+
+async function handleLogout() {
+  await auth.logout()
+  ElMessage.success('已退出登录')
   router.push('/login')
 }
 </script>
@@ -67,5 +77,17 @@ function handleLogout() {
 .nav-links a.router-link-exact-active {
   color: #fff;
   border-bottom-color: var(--color-accent, #d98e5a);
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-name {
+  font-family: monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
 }
 </style>

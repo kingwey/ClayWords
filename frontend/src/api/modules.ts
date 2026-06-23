@@ -9,6 +9,27 @@ import type {
   TaskStatusResponse
 } from '@/types'
 
+// ============ 认证 API ============
+
+export interface CurrentUser {
+  user_id: string
+  phone: string         // 已脱敏 (139****1234)
+  role: 'user' | 'studio' | 'admin'
+  studio_id: string | null
+}
+
+export const authApi = {
+  /** 当前登录用户资料 (用于显示昵称 / 头像; 未登录返回 401) */
+  getCurrentUser() {
+    return client.get<CurrentUser>('/api/v1/auth/user')
+  },
+
+  /** 登出 - 后端清 HttpOnly cookie */
+  logout() {
+    return client.post('/api/v1/auth/logout')
+  }
+}
+
 // ============ Hunyuan3D API ============
 
 export const hunyuan3dApi = {

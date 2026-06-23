@@ -17,7 +17,34 @@
           <router-link to="/orders">
             <span class="nav-zh">我的订单</span>
           </router-link>
-          <router-link to="/login" class="nav-cta">
+
+          <!-- 已登录: 用户徽标 + 下拉菜单 -->
+          <el-dropdown
+            v-if="auth.isAuthenticated"
+            trigger="click"
+            placement="bottom-end"
+            @command="onUserCommand"
+          >
+            <button type="button" class="user-chip" aria-label="用户菜单">
+              <span class="avatar">{{ avatarLetter }}</span>
+              <span class="user-name">{{ auth.displayName || auth.roleLabel || '已登录' }}</span>
+              <span v-if="auth.roleLabel && auth.role !== 'user'" class="role-tag">
+                {{ auth.roleLabel }}
+              </span>
+              <span class="caret">▾</span>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-if="auth.isAdmin" command="admin">管理后台</el-dropdown-item>
+                <el-dropdown-item v-if="auth.isStudio" command="studio">工作室订单</el-dropdown-item>
+                <el-dropdown-item command="orders">我的订单</el-dropdown-item>
+                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+
+          <!-- 未登录: 登录按钮 -->
+          <router-link v-else to="/login" class="nav-cta">
             <span class="nav-zh">登录</span>
           </router-link>
         </div>
@@ -36,10 +63,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
 // 用户端全局导航仅用于普通 C 端页面（首页/订单等）。
 // 以下页面各有自己的导航壳，不应叠加这条 C 端导航：
@@ -55,6 +86,49 @@ const showNav = computed(() => {
   if (p.startsWith('/admin')) return false
   return true
 })
+
+// 头像字母: 取脱敏手机号末位或 user_id 首字
+const avatarLetter = computed(() => {
+  const name = auth.displayName
+  if (!name) return '陶'
+  // 脱敏手机号 (139****1234) 取末位数字
+  const digits = name.replace(/\D/g, '')
+  if (digits.length > 0) return digits.slice(-1)
+  return name.slice(0, 1).toUpperCase()
+})
+
+// 应用启动 + 路由切换 + role 变更时, 拉一次用户资料 (内部去重)
+async function ensureUserLoaded() {
+  if (auth.isAuthenticated) {
+    await auth.fetchUser()
+  }
+}
+onMounted(ensureUserLoaded)
+watch(() => auth.role, ensureUserLoaded)
+
+async function onUserCommand(cmd: string) {
+  if (cmd === 'logout') {
+    try {
+      await ElMessageBox.confirm('确定退出当前账号?', '退出登录', {
+        confirmButtonText: '退出',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+    } catch {
+      return // 用户点了取消
+    }
+    await auth.logout()
+    ElMessage.success('已退出登录')
+    // 留在原页面; 但若原页面需要登录, 路由守卫会自动跳登录页
+    if (route.meta.requiresAuth) {
+      router.push('/login')
+    }
+    return
+  }
+  if (cmd === 'admin') router.push('/admin')
+  else if (cmd === 'studio') router.push('/studio')
+  else if (cmd === 'orders') router.push('/orders')
+}
 </script>
 
 <style>
@@ -171,6 +245,66 @@ const showNav = computed(() => {
 .nav-links a.nav-cta:hover {
   background: var(--color-primary-dark);
   color: #fff;
+}
+
+/* ======= 已登录用户徽标 ======= */
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  background: rgba(45, 74, 72, 0.06);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  outline: none;
+}
+.user-chip:hover {
+  background: rgba(45, 74, 72, 0.1);
+  border-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.user-chip:focus-visible {
+  box-shadow: 0 0 0 3px rgba(45, 74, 72, 0.15);
+}
+
+.user-chip .avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-family-mono);
+}
+
+.user-chip .user-name {
+  font-family: var(--font-family-mono);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.user-chip .role-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(201, 123, 90, 0.12);
+  color: var(--color-accent);
+  border: 1px solid rgba(201, 123, 90, 0.25);
+}
+
+.user-chip .caret {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  margin-left: 2px;
 }
 
 /* ======= 主内容区 ======= */
