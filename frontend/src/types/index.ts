@@ -69,6 +69,35 @@ export interface SSEEvent {
   error?: { code: string; message: string }
 }
 
+// ============ Hunyuan3D ============
+
+export interface Hunyuan3DSubmitRequest {
+  Prompt?: string
+  ImageUrl?: { Url: string }
+  Model?: '3.0' | '3.1'
+  LowPoly?: boolean
+  Sketch?: boolean
+}
+
+export interface Hunyuan3DSubmitResponse {
+  task_id: string
+  job_id: string
+  message: string
+}
+
+export interface TaskStatusResponse {
+  task_id: string
+  state: 'pending' | 'running' | 'completed' | 'failed' | 'timeout'
+  payload: Record<string, any>
+  result?: {
+    glb_url?: string
+    thumbnail_url?: string
+  }
+  error?: string
+  created_at: string
+  updated_at: string
+}
+
 // ============ 工作室端 ============
 
 export interface StudioOrderSummary {

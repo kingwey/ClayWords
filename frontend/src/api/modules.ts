@@ -3,8 +3,30 @@ import type {
   StudioOrderSummary,
   StudioOrderDetail,
   StudioListItem,
-  AlertItem
+  AlertItem,
+  Hunyuan3DSubmitRequest,
+  Hunyuan3DSubmitResponse,
+  TaskStatusResponse
 } from '@/types'
+
+// ============ Hunyuan3D API ============
+
+export const hunyuan3dApi = {
+  /** 提交 3D 生成任务 */
+  submit(payload: Hunyuan3DSubmitRequest) {
+    return client.post<Hunyuan3DSubmitResponse>('/api/v1/hunyuan3d/submit', payload)
+  },
+
+  /** 查询任务状态 */
+  getTaskStatus(taskId: string) {
+    return client.get<TaskStatusResponse>(`/api/v1/tasks/${taskId}`)
+  },
+
+  /** SSE 实时进度流 (返回 EventSource URL) */
+  getTaskEventsUrl(taskId: string) {
+    return `/api/v1/tasks/${taskId}/events`
+  }
+}
 
 // ============ 工作室端 API ============
 
