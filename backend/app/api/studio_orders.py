@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime
+from app.core.time import utcnow
 
 from app.api.auth import get_current_user, UserInfo
 from app.db.session import get_session
@@ -236,7 +237,7 @@ async def accept_order(
     # 状态迁移
     old_status = order.status
     order.status = "producing"
-    order.updated_at = datetime.utcnow()
+    order.updated_at = utcnow()
 
     # 记录状态变更日志
     log = OrderLog(
@@ -260,7 +261,7 @@ async def accept_order(
 
         if studio:
             studio.current_load = (studio.current_load or 0) + 1
-            studio.updated_at = datetime.utcnow()
+            studio.updated_at = utcnow()
 
     await session.commit()
 
@@ -335,7 +336,7 @@ async def reject_order(
     # 清除当前工作室分配，回到待派单状态等待重新分配
     order.studio_id = None
     order.status = "pending"
-    order.updated_at = datetime.utcnow()
+    order.updated_at = utcnow()
 
     await session.commit()
 
@@ -382,7 +383,7 @@ async def complete_order(
     # 状态迁移
     old_status = order.status
     order.status = "completed"
-    order.updated_at = datetime.utcnow()
+    order.updated_at = utcnow()
 
     # 记录日志
     log = OrderLog(
@@ -403,7 +404,7 @@ async def complete_order(
 
         if studio and studio.current_load > 0:
             studio.current_load -= 1
-            studio.updated_at = datetime.utcnow()
+            studio.updated_at = utcnow()
 
     await session.commit()
 

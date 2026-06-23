@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from app.core.time import utcnow
 from typing import Optional, List, Annotated
 
 from fastapi import APIRouter, HTTPException, Depends, status, Body
@@ -215,7 +216,7 @@ async def send_message(
     session.add(user_message)
 
     # Update session
-    s.updated_at = datetime.utcnow()
+    s.updated_at = utcnow()
     if s.title == "新会话":
         s.title = request.content[:50]
 

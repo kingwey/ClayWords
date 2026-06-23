@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime
+from app.core.time import utcnow
 
 from app.api.auth import get_current_user, UserInfo
 from app.db.session import get_session
@@ -93,7 +94,7 @@ async def create_shipping(
 
     # 更新订单状态
     order.status = "shipped"
-    order.updated_at = datetime.utcnow()
+    order.updated_at = utcnow()
 
     # 物流信息记录到 OrderLog.extra_data
     shipping_log = OrderLog(
@@ -108,7 +109,7 @@ async def create_shipping(
             "carrier": shipping_info.carrier,
             "estimated_delivery_date": shipping_info.estimated_delivery_date,
             "notes": shipping_info.notes,
-            "shipped_at": datetime.utcnow().isoformat(),
+            "shipped_at": utcnow().isoformat(),
         }
     )
     session.add(shipping_log)
@@ -179,7 +180,7 @@ async def get_tracking_info(
             location="江西省景德镇市"
         ),
         TrackingEvent(
-            time=datetime.utcnow().isoformat(),
+            time=utcnow().isoformat(),
             status="in_transit",
             description="快件在【景德镇转运中心】已发出",
             location="江西省景德镇市"
@@ -194,7 +195,7 @@ async def get_tracking_info(
         logistics_status = "delivered"
         mock_events.append(
             TrackingEvent(
-                time=datetime.utcnow().isoformat(),
+                time=utcnow().isoformat(),
                 status="delivered",
                 description="快件已签收",
                 location="用户地址"
@@ -252,7 +253,7 @@ async def confirm_delivery(
 
     # 更新订单状态
     order.status = "delivered"
-    order.updated_at = datetime.utcnow()
+    order.updated_at = utcnow()
 
     # 记录确认收货日志
     delivery_log = OrderLog(
@@ -264,7 +265,7 @@ async def confirm_delivery(
         extra_data={
             "rating": request.rating,
             "comment": request.comment,
-            "confirmed_at": datetime.utcnow().isoformat(),
+            "confirmed_at": utcnow().isoformat(),
         }
     )
     session.add(delivery_log)

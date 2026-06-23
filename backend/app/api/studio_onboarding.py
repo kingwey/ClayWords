@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime
+from app.core.time import utcnow
 
 from app.api.auth import get_current_user, UserInfo
 from app.db.session import get_session
@@ -195,7 +196,7 @@ async def approve_or_reject_studio(
         overrides = dict(studio.craft_overrides or {})
         overrides["status"] = "approved"
         overrides["approved_by"] = current_user.user_id
-        overrides["approved_at"] = datetime.utcnow().isoformat()
+        overrides["approved_at"] = utcnow().isoformat()
 
         # 调整产能（如果管理员指定）
         if request.adjusted_capacity is not None:
@@ -223,7 +224,7 @@ async def approve_or_reject_studio(
         overrides = dict(studio.craft_overrides or {})
         overrides["status"] = "rejected"
         overrides["rejected_by"] = current_user.user_id
-        overrides["rejected_at"] = datetime.utcnow().isoformat()
+        overrides["rejected_at"] = utcnow().isoformat()
         overrides["rejection_reason"] = request.reason
         studio.craft_overrides = overrides
 

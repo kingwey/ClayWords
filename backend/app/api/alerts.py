@@ -10,6 +10,7 @@ from app.services.alerting.alerting_service import (
     get_alerting_service, AlertingService, AlertSeverity, AlertStatus
 )
 from app.core.metrics import get_metrics
+from app.core.time import utcnow
 
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
@@ -114,7 +115,7 @@ async def trigger_evaluation(
     new_alerts = alerting.evaluate(metrics)
 
     return {
-        "evaluated_at": datetime.utcnow().isoformat(),
+        "evaluated_at": utcnow().isoformat(),
         "rules_count": len(alerting.rules),
         "active_alerts": len(alerting.active_alerts),
         "new_alerts": len(new_alerts),
