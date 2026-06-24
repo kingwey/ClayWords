@@ -156,6 +156,88 @@ export const studioApi = {
   }
 }
 
+// ============ Tasks API ============
+
+export interface TaskStatusResponse {
+  task_id: string
+  state: string  // pending | processing | completed | failed
+  progress?: number
+  result?: any
+  error?: string
+  created_at: string
+  updated_at: string
+}
+
+export const tasksApi = {
+  /** 查询任务状态 */
+  getTaskStatus(taskId: string) {
+    return client.get<TaskStatusResponse>(`/api/v1/tasks/${taskId}`)
+  },
+
+  /** SSE 实时任务进度流 (返回 EventSource URL) */
+  getTaskEventsUrl(taskId: string) {
+    return `/api/v1/tasks/${taskId}/events`
+  }
+}
+
+// ============ Sessions API ============
+
+export interface SessionResponse {
+  id: string
+  user_id: string
+  title: string
+  created_at: string
+  updated_at: string
+}
+
+export interface MessageResponse {
+  id: string
+  role: string
+  content: string
+  design_params?: Record<string, any>
+  created_at: string
+}
+
+export interface SendMessageRequest {
+  content: string
+}
+
+export interface SendMessageResponse {
+  task_id: string
+}
+
+export const sessionsApi = {
+  /** 创建新会话 */
+  createSession(title?: string) {
+    return client.post<SessionResponse>('/api/v1/sessions', { title })
+  },
+
+  /** 获取会话列表 */
+  listSessions() {
+    return client.get<SessionResponse[]>('/api/v1/sessions')
+  },
+
+  /** 获取会话详情 */
+  getSession(sessionId: string) {
+    return client.get<SessionResponse>(`/api/v1/sessions/${sessionId}`)
+  },
+
+  /** 获取会话消息 */
+  getMessages(sessionId: string) {
+    return client.get<MessageResponse[]>(`/api/v1/sessions/${sessionId}/messages`)
+  },
+
+  /** 发送消息（触发设计生成） */
+  sendMessage(sessionId: string, content: string, demo?: boolean) {
+    const params = demo ? { demo: true } : {}
+    return client.post<SendMessageResponse>(
+      `/api/v1/sessions/${sessionId}/messages`,
+      { content },
+      { params }
+    )
+  }
+}
+
 // ============ 管理后台 API ============
 
 export const adminApi = {

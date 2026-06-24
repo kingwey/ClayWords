@@ -76,6 +76,7 @@ import { usePreviewRotation } from '@/composables/usePreviewRotation'
 import { useDesignVersions } from '@/composables/useDesignVersions'
 import { useHunyuan3D } from '@/composables/useHunyuan3D'
 import { useDesignMessages } from '@/composables/useDesignMessages'
+import { useDesignMessagesReal } from '@/composables/useDesignMessagesReal'
 import { useOrderFlow } from '@/composables/useOrderFlow'
 import type { Option } from '@/types/design'
 import DesignHeader from '@/components/DesignHeader.vue'
@@ -115,10 +116,15 @@ const showTweakPanel = ref(false)
 const preview = usePreviewRotation()
 const { rotateX, rotateY, autoRotate, toggleAutoRotate, resetView } = preview
 
-// ---- 消息/方案 (抽到 composable) ------------------------------------------
+// ---- 消息/方案 (切换到真实 API) ------------------------------------------
+// 使用环境变量控制是否使用真实 API，默认使用真实 API
+const USE_REAL_API = import.meta.env.VITE_USE_REAL_API !== 'false'
+
 const { messages, options, selectedOptionId, inputText, sending, tweaks,
-        addAiMessage, onReferenceUpload, sendUserMessage, applyTweak } =
-  useDesignMessages(currentGlaze)
+        addAiMessage, onReferenceUpload, sendUserMessage, applyTweak, initSession } =
+  USE_REAL_API
+    ? useDesignMessagesReal(currentGlaze)
+    : useDesignMessages(currentGlaze)
 
 // ---- 版本树 ----------------------------------------------------------------
 const { versions, showVersionTree, pushVersion, rollbackToVersion } =
@@ -237,10 +243,20 @@ watch(selectedOptionId, (id) => {
 onMounted(() => {
   auth.fetchUser()
   preview.bindStage(previewRef.value?.stageEl ?? null)
+
+  // 初始化会话（如果使用真实 API）
+  if (USE_REAL_API && initSession) {
+    initSession()
+  }
+
   addAiMessage(`<strong>你好呀，我是陶语 👋</strong><br/>把你想要的陶瓷用自然语言描述给我，我帮你生成可直接下单烧制的方案。<br/><em style="color:#8a7d6f;font-size:12px;">试试：送给妈妈的生日礼物，她属兔，喜欢月亮和桂花…</em>`)
+
+  // 自动发送演示消息（可选）
   setTimeout(() => {
-    if (!inputText.value.trim()) inputText.value = '送给妈妈的生日礼物，她属兔，喜欢月亮和桂花，希望是冷白釉，放玄关'
-    sendUserMessage()
+    if (!inputText.value.trim()) {
+      inputText.value = '送给妈妈的生日礼物，她属兔，喜欢月亮和桂花，希望是冷白釉，放玄关'
+      sendUserMessage()
+    }
   }, 1500)
 })
 </script>
