@@ -5,14 +5,18 @@ from fastapi import APIRouter, HTTPException, Depends, status, Request, Form
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime
-from app.core.time import utcnow
+import structlog
 
+from app.core.time import utcnow
 from app.api.auth import get_current_user, UserInfo
 from app.db.session import get_session
 from app.models.entities import Order, IdempotencyKey
 from app.services.payment.payment_service import get_payment_service, PaymentService
 from app.services.order import update_order_status, OrderStatus
+
+logger = structlog.get_logger()
 
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -159,17 +163,10 @@ async def payment_callback(
             detail="缺少订单号"
         )
 
-    # 幂等性检查
+    # 幂等性检查 - 使用数据库唯一约束防止竞态条件
+    # 策略：先写入幂等性键，利用主键唯一约束。如果并发回调，后到的会触发 IntegrityError
     idempotency_key = f"payment_callback_{trade_no}"
-    stmt = select(IdempotencyKey).where(IdempotencyKey.key == idempotency_key)
-    result = await session.execute(stmt)
-    existing = result.scalar_one_or_none()
 
-    if existing:
-        # 已处理过，返回成功（支付宝要求返回 success）
-        return "success"
-
-    # 记录幂等性键（修：之前用 metadata= 字段不存在；resource_id/expires_at 必填漏写）
     from datetime import timedelta as _td
 
     idem_key = IdempotencyKey(
@@ -185,6 +182,19 @@ async def payment_callback(
         expires_at=utcnow() + _td(days=7),
     )
     session.add(idem_key)
+
+    try:
+        # 强制刷新到数据库，触发唯一约束检查
+        await session.flush()
+    except IntegrityError:
+        # 重复回调，已被其他请求处理
+        await session.rollback()
+        logger.info(
+            "payment_callback_duplicate",
+            trade_no=trade_no,
+            out_trade_no=out_trade_no
+        )
+        return "success"
 
     # 查找订单
     stmt = select(Order).where(Order.order_id == out_trade_no)
