@@ -39,6 +39,8 @@ async def get_task_status(
     """Get task status (used as fallback for disconnected clients).
 
     Reads from Redis cache first, falls back to PostgreSQL.
+
+    For completed tasks, fetches the full result using cache-aside pattern.
     """
     task = await task_service.get_task(task_id)
 
@@ -55,8 +57,16 @@ async def get_task_status(
         result_uri=task.result_uri,
     )
 
+    # For completed tasks, fetch full result (with cache-aside pattern)
+    if task.state == TASK_STATE_COMPLETED:
+        result = await task_service.get_task_result(task_id)
+        if result and result.get("options"):
+            response.options = result["options"]
+
     if task.state == TASK_STATE_FAILED and task.error_message:
         response.error = task.error_message
+
+    return response
 
     return response
 

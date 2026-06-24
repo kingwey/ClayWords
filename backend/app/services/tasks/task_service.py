@@ -34,6 +34,7 @@ class TaskInfo:
     state: str
     payload: dict
     progress: int = 0
+    result: Optional[dict] = None  # 完整任务结果
     result_uri: Optional[str] = None
     error_message: Optional[str] = None
     created_at: Optional[str] = None
@@ -123,6 +124,7 @@ class TaskService:
                     state=task.state,
                     payload=task.payload,
                     progress=task.progress,
+                    result=task.result,
                     result_uri=task.result_uri,
                     error_message=task.error_message,
                     created_at=task.created_at.isoformat() if task.created_at else None,
@@ -134,6 +136,7 @@ class TaskService:
                     task.state,
                     payload=task.payload,
                     progress=task.progress,
+                    result=task.result,
                     result_uri=task.result_uri,
                     error_message=task.error_message,
                 )
@@ -146,6 +149,7 @@ class TaskService:
         task_id: str,
         state: str,
         progress: Optional[int] = None,
+        result: Optional[dict] = None,
         result_uri: Optional[str] = None,
         error_message: Optional[str] = None,
     ) -> Optional[TaskInfo]:
@@ -155,8 +159,8 @@ class TaskService:
         # 1. Update PostgreSQL
         async with async_session_maker() as session:
             stmt = select(TaskModel).where(TaskModel.task_id == task_id)
-            result = await session.execute(stmt)
-            task = result.scalar_one_or_none()
+            result_query = await session.execute(stmt)
+            task = result_query.scalar_one_or_none()
 
             if not task:
                 return None
@@ -165,6 +169,8 @@ class TaskService:
             task.updated_at = now
             if progress is not None:
                 task.progress = progress
+            if result is not None:
+                task.result = result
             if result_uri is not None:
                 task.result_uri = result_uri
             if error_message is not None:
@@ -184,6 +190,7 @@ class TaskService:
             state,
             payload=payload,
             progress=progress or 0,
+            result=result,
             result_uri=result_uri,
             error_message=error_message,
         )
@@ -193,6 +200,7 @@ class TaskService:
             state=state,
             payload=payload,
             progress=progress or 0,
+            result=result,
             result_uri=result_uri,
             error_message=error_message,
             updated_at=now.isoformat(),
@@ -260,12 +268,55 @@ class TaskService:
 
         return result
 
+    async def get_task_result(self, task_id: str) -> Optional[dict]:
+        """
+        Get task result with cache-aside pattern:
+        1. Try Redis cache (fast path)
+        2. Fallback to PostgreSQL (persistent storage)
+        3. Backfill Redis cache on cache miss
+
+        Returns:
+            Task result dict or None if task not found or not completed
+        """
+        # 1. Try legacy Redis result key first (backward compatibility)
+        cached_result = await self.redis.get(f"task:{task_id}:result")
+        if cached_result:
+            return json.loads(cached_result)
+
+        # 2. Try task state cache (includes result)
+        cached_state = await self.redis.get(f"task:{task_id}:state")
+        if cached_state:
+            data = json.loads(cached_state)
+            if data.get("result"):
+                return data["result"]
+
+        # 3. Fallback to PostgreSQL
+        async with async_session_maker() as session:
+            stmt = select(TaskModel).where(TaskModel.task_id == task_id)
+            result = await session.execute(stmt)
+            task = result.scalar_one_or_none()
+
+            if not task or task.state not in ["completed", "failed"]:
+                return None
+
+            # 4. Backfill Redis cache (10 minutes for completed tasks)
+            if task.result:
+                await self.redis.set(
+                    f"task:{task_id}:result",
+                    json.dumps(task.result),
+                    ex=600  # 10 minutes (shorter than state cache)
+                )
+                return task.result
+
+        return None
+
     async def _cache_task_state(
         self,
         task_id: str,
         state: str,
         payload: Optional[dict] = None,
         progress: int = 0,
+        result: Optional[dict] = None,
         result_uri: Optional[str] = None,
         error_message: Optional[str] = None,
         ttl: int = 3600,
@@ -276,6 +327,7 @@ class TaskService:
             "state": state,
             "payload": payload or {},
             "progress": progress,
+            "result": result,
             "result_uri": result_uri,
             "error_message": error_message,
             "updated_at": utcnow().isoformat(),

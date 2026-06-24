@@ -209,6 +209,7 @@ class Task(Base):
     task_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     state: Mapped[str] = mapped_column(String(20), nullable=False)
     payload: Mapped[dict] = mapped_column(JSONB(), default=dict)
+    result: Mapped[Optional[dict]] = mapped_column(JSONB(), nullable=True)  # 完整任务结果 (双写)
     result_uri: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     progress: Mapped[int] = mapped_column(Integer, default=0)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
