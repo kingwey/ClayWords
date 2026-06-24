@@ -49,10 +49,10 @@
 - 管理后台：超管审核工作室入驻申请
 - 全局导航：用户徽标下拉菜单 (个人资料/订单/工作室/管理后台/退出)
 
-**API 端点**: 41 个  
-**数据库表**: 13 张  
-**前端页面**: 7 个 (首页/设计/订单/个人资料/登录/工作室/管理后台)  
-**文档**: 23 份完整报告
+**API 端点**: 60 个（按 `@router.<verb>` 实测）
+**数据库表**: 14 张（含 `studio_craft_overrides`）
+**前端页面**: 11 个 views + 8 个 components（用户端 / 工作室端 / 管理后台三端齐全）
+**文档**: 23 份（已统一中文命名，详见 [文档索引](./docs/00-文档索引.md)）
 
 ### 近期完成 (本次会话)
 - ✅ 修复手机号加密 pepper 不一致导致个人资料页显示空白 (repair script)
@@ -129,10 +129,11 @@ ClayWords/
 │   │   ├── api/                # Axios 封装
 │   │   └── assets/             # 静态资源
 │   └── vite.config.ts
-├── docs/                       # 23 份文档
-│   ├── api-reference.md        # API 完整参考
-│   ├── database-schema.md      # 数据库设计
-│   ├── security-report.md      # 安全评估
+├── docs/                       # 23 份文档（中文命名 + 两位数索引前缀）
+│   ├── 00-文档索引.md           # 索引入口
+│   ├── 01-项目分析报告-2026-06-23.md  # 当前事实基线
+│   ├── 11-技术方案v1.3.md       # 完整技术方案
+│   ├── 31-安全自检-OWASP-Top10.md # 安全评估
 │   └── ...
 ├── deploy/                     # 部署配置
 │   ├── k8s/                    # Kubernetes YAML
@@ -214,28 +215,21 @@ docker-compose up -d
 - ✅ 密码强度校验 (zxcvbn)
 - ✅ JWT 短过期 + Refresh Token
 
-详见 [安全评估报告](./docs/security-report.md)
+详见 [安全自检 OWASP Top 10](./docs/31-安全自检-OWASP-Top10.md)
 
 ## 📊 数据库设计
 
-**13 张表**:
-- users (用户表, AES-GCM 加密敏感字段)
-- studios (工作室表)
-- designs (设计会话)
-- design_messages (对话历史)
-- design_options (方案选项)
-- orders (订单表)
-- order_items (订单明细)
-- payments (支付记录)
-- shipments (物流追踪)
-- uploads (文件上传)
-- tasks (异步任务)
-- embeddings (向量检索)
-- audit_logs (审计日志)
+**14 张表**（按业务域分组）:
+- 用户与工作室: `users`、`studios`、`studio_craft_overrides`
+- 设计对话: `sessions`、`session_messages`、`design_templates`（含 1536 维向量）
+- 设计与版本: `designs`、`design_versions`
+- 订单与履约: `orders`、`order_logs`、`shipments`
+- 支付与幂等: `payments`、`idempotency_keys`
+- 任务与上传: `tasks`、`uploads`
 
-详见 [数据库设计文档](./docs/database-schema.md)
+详见 [技术方案 v1.3](./docs/11-技术方案v1.3.md) 第 4 章「数据模型」
 
-## 🔌 API 端点 (41 个)
+## 🔌 API 端点（摘录 41 个核心端点，实测共 60 个）
 
 ### 认证 (3)
 - `POST /auth/send-code` - 发送验证码
@@ -294,7 +288,7 @@ docker-compose up -d
 - `GET /admin/logs` - 审计日志
 - `GET /admin/health` - 健康检查
 
-详见 [API 参考文档](./docs/api-reference.md)
+详见 [项目分析报告 2026-06-23](./docs/01-项目分析报告-2026-06-23.md)（API 端点实测 60 个，按业务域分类）
 
 ## 🎨 前端页面 (7 个)
 
@@ -349,9 +343,9 @@ helm install claywords ./claywords -n claywords --create-namespace
 ```
 
 详见:
-- [部署指南](./docs/deployment-guide.md)
-- [生产配置检查清单](./docs/production-checklist.md)
-- [备份与恢复 Runbook](./docs/backup-restore-runbook.md)
+- [生产部署检查清单](./docs/21-生产部署检查清单.md)
+- [备份恢复手册](./docs/22-备份恢复手册.md)
+- [PostgreSQL 高可用配置](./docs/23-PostgreSQL高可用配置.md)
 
 ## 🧪 测试
 
@@ -375,7 +369,7 @@ npm run preview
 - **日志**: Loki + structlog
 - **健康检查**: `/admin/health` (Kubernetes Liveness/Readiness)
 
-详见 [监控配置](./docs/monitoring-setup.md)
+详见 [业务监控仪表盘](./docs/24-业务监控仪表盘.md) · [服务等级目标](./docs/25-服务等级目标.md)
 
 ## 🗺️ 路线图
 
@@ -407,7 +401,7 @@ npm run preview
 - [ ] 智能定价
 - [ ] 供应链优化
 
-详见 [MVP 上线 Sprint 计划](./docs/mvp-sprint-plan.md)
+详见 [推进路线 2026-06-23](./docs/02-推进路线-2026-06-23.md)
 
 ## 🏆 项目成就
 
@@ -435,10 +429,10 @@ npm run preview
 - Redis (BSD 3-Clause)
 - MinIO (AGPL 3.0 - 自托管)
 
-详见 [开源许可证合规报告](./docs/license-compliance.md)
+详见 [开源许可证合规](./docs/32-开源许可证合规.md)
 
 ---
 
-**最后更新**: 2026-06-23  
+**最后更新**: 2026-06-24  
 **版本**: v1.0.0-playoff  
-**状态**: 后端 100% 完成, 前端核心功能已上线
+**状态**: 后端 95% 生产就绪 / 前端三端骨架齐全 / 待端到端冒烟与生产部署落地
