@@ -12,6 +12,7 @@ from app.api import auth, health, sessions, sse, tasks, options, orders, demo, u
 from app.core.config import settings
 from app.core.redis import redis_client
 from app.core.storage import minio_client
+from app.core.http_client import shutdown_http_client
 from app.core.logging_middleware import LoggingMiddleware
 from app.core.metrics import PrometheusMiddleware
 from app.core.rate_limit import RateLimitMiddleware
@@ -43,6 +44,8 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("minio_connection_failed", error=str(e))
     yield
+    await shutdown_http_client()
+    logger.info("http_client_shutdown")
     await redis_client.disconnect()
     logger.info("application_shutdown")
 

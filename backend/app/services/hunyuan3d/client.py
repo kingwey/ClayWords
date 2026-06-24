@@ -2,6 +2,7 @@
 
 import httpx
 from app.core.config import settings
+from app.core.http_client import get_http_client
 from app.services.hunyuan3d.schemas import (
     SubmitRequest, SubmitResponse,
     QueryRequest, QueryResponse
@@ -47,19 +48,20 @@ class Hunyuan3DClient:
         logger.info("hunyuan3d_submit", payload=payload)
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(url, json=payload, headers=self.headers)
-                response.raise_for_status()
+            # 使用全局共享 HTTP 客户端（连接池复用）
+            client = await get_http_client()
+            response = await client.post(url, json=payload, headers=self.headers)
+            response.raise_for_status()
 
-                data = response.json()
+            data = response.json()
 
-                # 腾讯云 API 返回格式: {"Response": {"JobId": "xxx", "RequestId": "xxx"}}
-                if "Response" in data:
-                    data = data["Response"]
+            # 腾讯云 API 返回格式: {"Response": {"JobId": "xxx", "RequestId": "xxx"}}
+            if "Response" in data:
+                data = data["Response"]
 
-                logger.info("hunyuan3d_submit_success", job_id=data.get("JobId"))
+            logger.info("hunyuan3d_submit_success", job_id=data.get("JobId"))
 
-                return SubmitResponse(**data)
+            return SubmitResponse(**data)
         except httpx.HTTPStatusError as e:
             logger.error(
                 "hunyuan3d_submit_failed",
@@ -91,19 +93,20 @@ class Hunyuan3DClient:
         payload = {"JobId": job_id}
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(url, json=payload, headers=self.headers)
-                response.raise_for_status()
+            # 使用全局共享 HTTP 客户端（连接池复用）
+            client = await get_http_client()
+            response = await client.post(url, json=payload, headers=self.headers)
+            response.raise_for_status()
 
-                data = response.json()
+            data = response.json()
 
-                # 腾讯云 API 返回格式: {"Response": {...}}
-                if "Response" in data:
-                    data = data["Response"]
+            # 腾讯云 API 返回格式: {"Response": {...}}
+            if "Response" in data:
+                data = data["Response"]
 
-                logger.debug("hunyuan3d_query", job_id=job_id, status=data.get("Status"))
+            logger.debug("hunyuan3d_query", job_id=job_id, status=data.get("Status"))
 
-                return QueryResponse(**data)
+            return QueryResponse(**data)
         except httpx.HTTPStatusError as e:
             logger.error(
                 "hunyuan3d_query_failed",
