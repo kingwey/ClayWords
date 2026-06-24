@@ -6,7 +6,7 @@ from app.core.time import utcnow
 from typing import Optional, List, Annotated
 
 from fastapi import APIRouter, HTTPException, Depends, status, Body
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
@@ -29,9 +29,7 @@ class SessionResponse(BaseModel):
     title: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MessageResponse(BaseModel):
@@ -40,9 +38,7 @@ class MessageResponse(BaseModel):
     content: str
     design_params: Optional[dict] = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CreateSessionRequest(BaseModel):

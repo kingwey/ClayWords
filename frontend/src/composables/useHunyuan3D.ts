@@ -57,7 +57,8 @@ export function useHunyuan3D() {
     }
 
     try {
-      const response = await hunyuan3dApi.submit(request)
+      const resp = await hunyuan3dApi.submit(request)
+      const response = resp.data
 
       taskState.value.taskId = response.task_id
       taskState.value.jobId = response.job_id
@@ -75,7 +76,7 @@ export function useHunyuan3D() {
     } catch (error: any) {
       taskState.value.state = 'failed'
       taskState.value.error = error.response?.data?.detail || '提交任务失败'
-      taskState.value.message = taskState.value.error
+      taskState.value.message = taskState.value.error ?? '提交任务失败'
     }
   }
 
@@ -135,7 +136,7 @@ export function useHunyuan3D() {
 
     if (data.state === 'failed') {
       taskState.value.error = data.error || '生成失败'
-      taskState.value.message = taskState.value.error
+      taskState.value.message = taskState.value.error ?? '生成失败'
       cleanup()
     }
   }
@@ -146,7 +147,8 @@ export function useHunyuan3D() {
   const startPolling = (taskId: string) => {
     pollTimer = window.setInterval(async () => {
       try {
-        const status = await hunyuan3dApi.getTaskStatus(taskId)
+        const response = await hunyuan3dApi.getTaskStatus(taskId)
+        const status = response.data
         updateFromStatus(status)
 
         if (status.state === 'completed' || status.state === 'failed' || status.state === 'timeout') {

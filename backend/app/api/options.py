@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, status, Header
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -36,9 +36,7 @@ class DesignOption(BaseModel):
     price: Optional[float] = None
     estimated_days: Optional[int] = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ConfirmRequest(BaseModel):

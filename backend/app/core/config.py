@@ -79,6 +79,13 @@ class Settings(BaseSettings):
     HUNYUAN3D_MAX_POLL_ATTEMPTS: int = 120  # 最大轮询次数（10 分钟）
     ENABLE_HUNYUAN3D: bool = True  # 功能开关
 
+    # ClamAV 文件扫描（uploads.confirm 接入）
+    # 开发环境默认关闭以省去本地依赖；生产环境必须开启，否则启动校验拒启。
+    CLAMAV_ENABLED: bool = False
+    CLAMAV_HOST: str = "localhost"
+    CLAMAV_PORT: int = 3310
+    CLAMAV_TIMEOUT_SECONDS: int = 30  # 扫描超时（大文件需要更长）
+
     @property
     def is_production(self) -> bool:
         """是否生产环境"""
@@ -120,6 +127,9 @@ class Settings(BaseSettings):
             # 兜底工作室必须显式注入（防派单全部失败时静默回退到空 ID）
             if not self.CENTRAL_STUDIO_ID:
                 problems.append("CENTRAL_STUDIO_ID must be set in production")
+            # 生产环境必须开启 ClamAV，否则 uploads.confirm 直接标 clean，等于无扫描
+            if not self.CLAMAV_ENABLED:
+                problems.append("CLAMAV_ENABLED must be True in production")
             if problems:
                 raise ValueError(
                     "Insecure production configuration: "

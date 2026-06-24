@@ -21,9 +21,11 @@ export interface Option {
   days: number
   price: number
   tags: string[]
-  type: 'rabbit' | 'moon-vase' | 'incense-holder' | 'vase'
+  type: 'rabbit' | 'moon-vase' | 'incense-holder' | 'vase' | 'custom'
   colors: OptionColors
   loading?: boolean
+  glbUrl?: string
+  thumbnailUrl?: string
 }
 
 export interface Message {

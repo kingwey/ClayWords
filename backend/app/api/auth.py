@@ -13,7 +13,7 @@ from app.db.session import get_session
 from app.core.config import settings
 from app.core.crypto import get_crypto
 from app.core.time import utcnow
-from app.services.auth import create_access_token, create_refresh_token, verify_token
+from app.services.auth import create_access_token, create_refresh_token, verify_token, revoke_token, is_token_revoked
 
 
 router = APIRouter()
@@ -90,6 +90,13 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token"
+        )
+
+    # 黑名单检查：token 签名合法但已被主动撤销（logout / 权限变更）
+    if await is_token_revoked(payload.get("jti")):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked"
         )
 
     user_id = payload.get("sub")
@@ -287,8 +294,16 @@ async def refresh_token(
 
 
 @router.post("/logout")
-async def logout(response: Response):
-    """登出 - 清除 HttpOnly cookie"""
+async def logout(
+    response: Response,
+    access_token: str = Cookie(None),
+    refresh_token: str = Cookie(None),
+):
+    """登出 - 撤销 token（加入黑名单）+ 清除 cookie"""
+    if access_token:
+        await revoke_token(access_token)
+    if refresh_token:
+        await revoke_token(refresh_token)
     response.delete_cookie(key="access_token")
     response.delete_cookie(key="refresh_token")
     return {"message": "Logged out successfully"}

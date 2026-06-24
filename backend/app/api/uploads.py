@@ -2,18 +2,23 @@
 
 import mimetypes
 from typing import List
+
+import structlog
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.api.auth import get_current_user, UserInfo
+from app.core.clamav import ClamAVError, get_clamav
+from app.core.config import settings
 from app.db.session import get_session
 from app.models.entities import Upload
 from app.core.storage import MinIOClient, get_minio
 
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
+logger = structlog.get_logger()
 
 
 # 允许的文件类型和大小限制
@@ -202,8 +207,17 @@ async def confirm_upload(
     """Confirm upload complete and trigger scanning.
 
     Client calls this after PUT completes successfully.
-    Phase Q4: Auto-mark as clean (no real scan yet).
-    Phase Q5: Enqueue ClamAV scan task.
+    流程:
+      1. 校验对象在 MinIO 中存在
+      2. 若 CLAMAV_ENABLED: 拉回对象 → ClamAV INSTREAM 扫描
+         - 干净  → state=clean
+         - 染毒  → state=quarantined（同时尝试删除 MinIO 中的恶意文件）
+         - 扫描错误 → 保留 pending 状态（不放过，等下次重试）
+      3. 否则（开发环境）: 标 clean 并附带 warning 标记，方便事后回溯哪些文件未真正扫描
+
+    生产环境 CLAMAV_ENABLED 为 False 时会被 Settings 启动校验拒启
+    （app/core/config.py:_check_production_secrets），所以走到这里的非扫描分支
+    只可能在 development/staging。
     """
     stmt = select(Upload).where(
         Upload.upload_id == upload_id,
@@ -231,17 +245,96 @@ async def confirm_upload(
             detail="File not found in storage. Upload may have failed."
         )
 
-    # Phase Q4: Auto-mark as clean (Phase Q5 will add real scan)
-    upload.state = "clean"
-    upload.scan_result = {
-        "scanned": False,
-        "clean": True,
-        "note": "Phase Q4: Auto-approved, real scan in Q5"
-    }
+    if not settings.CLAMAV_ENABLED:
+        # 开发环境降级路径：明确标记未扫描，便于事后审计
+        upload.state = "clean"
+        upload.scan_result = {
+            "scanned": False,
+            "clean": True,
+            "skip_reason": "CLAMAV_ENABLED=False",
+        }
+        await session.commit()
+        logger.warning(
+            "upload_skipped_scan",
+            upload_id=upload.upload_id,
+            object_key=upload.object_key,
+            uploader=current_user.user_id,
+        )
+        return {"status": "ok", "state": upload.state, "scanned": False}
 
+    # 生产路径：拉回字节流送 ClamAV
+    try:
+        file_data = minio.get_object_bytes(upload.object_key)
+    except Exception as exc:  # noqa: BLE001 - 网络/存储层异常都不应放过文件
+        logger.error(
+            "upload_fetch_failed",
+            upload_id=upload.upload_id,
+            object_key=upload.object_key,
+            error=str(exc),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to fetch file for scanning",
+        ) from exc
+
+    clamav = get_clamav()
+    upload.state = "scanning"  # 透明状态，方便客户端轮询
     await session.commit()
 
-    return {"status": "ok", "state": upload.state}
+    try:
+        scan_result = await clamav.scan_bytes(file_data)
+    except ClamAVError as exc:
+        # 扫描失败保留 pending 让客户端/Worker 后续重试，不要静默放过
+        logger.error(
+            "upload_scan_error",
+            upload_id=upload.upload_id,
+            object_key=upload.object_key,
+            error=str(exc),
+        )
+        upload.state = "pending"
+        upload.scan_result = {"scanned": False, "error": str(exc)}
+        await session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Virus scanner unavailable, please retry",
+        ) from exc
+
+    if scan_result.is_infected:
+        # 命中病毒：隔离状态 + 尝试从 MinIO 删除（best-effort，删除失败不阻塞响应）
+        upload.state = "quarantined"
+        upload.scan_result = {
+            "scanned": True,
+            "clean": False,
+            "virus_name": scan_result.virus_name,
+        }
+        try:
+            minio.delete_object(upload.object_key)
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "upload_quarantine_delete_failed",
+                upload_id=upload.upload_id,
+                object_key=upload.object_key,
+                error=str(exc),
+            )
+        await session.commit()
+        logger.warning(
+            "upload_infected",
+            upload_id=upload.upload_id,
+            object_key=upload.object_key,
+            virus=scan_result.virus_name,
+            uploader=current_user.user_id,
+        )
+        # 给客户端明确的拒绝信号，但不暴露过多扫描细节
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="File rejected by security scan",
+        )
+
+    # 干净
+    upload.state = "clean"
+    upload.scan_result = {"scanned": True, "clean": True}
+    await session.commit()
+    return {"status": "ok", "state": upload.state, "scanned": True}
 
 
 @router.get("", response_model=List[UploadStatusResponse])

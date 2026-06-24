@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.entities import Task
-from app.core.db import async_session_maker
+from app.db.session import async_session_maker
 from app.services.hunyuan3d.client import hunyuan3d_client
 from app.core.config import settings
 from app.core.time import utcnow
@@ -177,23 +177,27 @@ async def process_hunyuan3d_task(session: AsyncSession, task: Task):
 
 
 async def download_and_store_3d_file(result_url: str, task_id: str) -> str:
-    """
-    下载 3D 文件并存储到 MinIO
+    """下载 3D 文件并存储到 MinIO，返回平台内可访问的 URL。
+
+    Hunyuan3D 返回的远程 URL 是有有效期的（通常 24 小时），过期后已生成的模型
+    会失效。落到平台自己的 MinIO 才能保证模型长期可用。
 
     Args:
-        result_url: Hunyuan3D 返回的 3D 文件 URL
-        task_id: 任务 ID
+        result_url: Hunyuan3D 返回的 3D 文件远程 URL
+        task_id: 任务 ID（用作 object_key 后缀，便于追溯）
 
     Returns:
-        str: MinIO 中的文件 URL
+        str: MinIO 中文件的可访问 URL
 
     Raises:
         httpx.HTTPError: 下载失败
         Exception: 上传 MinIO 失败
     """
-    # 下载文件
+    from app.core.storage import minio_client
+
     logger.info("downloading_3d_file", url=result_url, task_id=task_id)
 
+    # 下载远程 GLB（120s 超时容忍 Hunyuan3D CDN 慢节点）
     async with httpx.AsyncClient(timeout=120.0) as client:
         response = await client.get(result_url)
         response.raise_for_status()
@@ -202,31 +206,31 @@ async def download_and_store_3d_file(result_url: str, task_id: str) -> str:
     file_size_mb = len(file_data) / (1024 * 1024)
     logger.info("3d_file_downloaded", task_id=task_id, size_mb=round(file_size_mb, 2))
 
-    # 上传到 MinIO
-    # TODO: 集成 MinIO 上传服务
-    # 当前先返回原始 URL（后续补充 MinIO 存储）
+    # 上传到 MinIO（hunyuan3d/<task_id>.glb，便于按任务回溯）
+    object_key = f"hunyuan3d/{task_id}.glb"
+    try:
+        minio_client.put_object_bytes(
+            object_key=object_key,
+            data=file_data,
+            content_type="model/gltf-binary",
+        )
+    except Exception as exc:
+        logger.error(
+            "3d_file_minio_upload_failed",
+            task_id=task_id,
+            object_key=object_key,
+            error=str(exc),
+        )
+        raise
 
-    # from app.services.storage import get_storage_service
-    # storage = get_storage_service()
-    # file_key = f"hunyuan3d/{task_id}.glb"
-    #
-    # minio_url = await storage.upload(
-    #     bucket="claywords-3d-models",
-    #     key=file_key,
-    #     data=file_data,
-    #     content_type="model/gltf-binary"
-    # )
-    #
-    # logger.info("3d_file_stored_minio", task_id=task_id, url=minio_url)
-    # return minio_url
-
-    # 临时方案：直接返回 Hunyuan3D 的 URL
-    logger.warning(
-        "3d_file_not_stored_minio",
+    minio_url = minio_client.get_public_url(object_key)
+    logger.info(
+        "3d_file_stored_minio",
         task_id=task_id,
-        reason="MinIO 存储服务待集成"
+        object_key=object_key,
+        url=minio_url,
     )
-    return result_url
+    return minio_url
 
 
 # 定时任务调度（供外部调度器调用）
