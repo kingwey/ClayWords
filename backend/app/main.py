@@ -43,7 +43,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,3 +72,27 @@ app.include_router(tasks.router, prefix="/api/v1", tags=["tasks"])
 app.include_router(options.router, prefix="/api/v1", tags=["options"])
 app.include_router(orders.router, prefix="/api/v1", tags=["orders"])
 app.include_router(demo.router, prefix="/api/v1", tags=["demo"])
+
+
+# 同源托管前端构建产物（SPA）。设置 STATIC_DIR 后生效；
+# 未匹配到静态文件的路径回退到 index.html，交给前端路由处理。
+if settings.STATIC_DIR:
+    import os
+
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
+
+    _static_dir = settings.STATIC_DIR
+    _index_file = os.path.join(_static_dir, "index.html")
+
+    if os.path.isdir(_static_dir):
+        _assets_dir = os.path.join(_static_dir, "assets")
+        if os.path.isdir(_assets_dir):
+            app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
+
+        @app.get("/{full_path:path}", include_in_schema=False)
+        async def serve_spa(full_path: str):
+            candidate = os.path.join(_static_dir, full_path)
+            if full_path and os.path.isfile(candidate):
+                return FileResponse(candidate)
+            return FileResponse(_index_file)

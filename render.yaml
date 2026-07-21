@@ -1,0 +1,44 @@
+services:
+  # 后端 + 前端同源托管（单 Docker Web 服务）
+  - type: web
+    name: claywords
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: claywords-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: claywords-redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CRYPTO_PEPPER
+        generateValue: true
+      - key: DEBUG
+        value: "false"
+      - key: LLM_PROVIDER
+        value: tongyi
+      - key: TONGYI_API_KEY
+        sync: false
+
+  - type: keyvalue
+    name: claywords-redis
+    plan: free
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
+    maxmemoryPolicy: allkeys-lru
+
+databases:
+  - name: claywords-db
+    databaseName: claywords
+    user: claywords
+    plan: free

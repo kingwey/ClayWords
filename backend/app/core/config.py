@@ -9,6 +9,12 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     DEBUG: bool = True
 
+    # 允许的前端来源（逗号分隔）；同源部署时无需额外配置
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+
+    # 前端构建产物目录；设置后由后端同源托管（SPA）
+    STATIC_DIR: str = ""
+
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./test.db"
 
