@@ -1,5 +1,7 @@
 services:
   # 后端 + 前端同源托管（单 Docker Web 服务）
+  # 数据库/Redis 使用外部免费托管服务（Neon / Upstash），
+  # 连接串在下方 sync:false 的环境变量里手动填入。
   - type: web
     name: claywords
     runtime: docker
@@ -9,15 +11,12 @@ services:
     dockerContext: .
     healthCheckPath: /health
     envVars:
+      # 外部 Postgres（Neon）连接串，形如 postgresql://user:pass@host/db?sslmode=require
       - key: DATABASE_URL
-        fromDatabase:
-          name: claywords-db
-          property: connectionString
+        sync: false
+      # 外部 Redis（Upstash）连接串，形如 rediss://default:pass@host:port
       - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: claywords-redis
-          property: connectionString
+        sync: false
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: CRYPTO_PEPPER
@@ -28,17 +27,3 @@ services:
         value: tongyi
       - key: TONGYI_API_KEY
         sync: false
-
-  - type: keyvalue
-    name: claywords-redis
-    plan: free
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: everywhere
-    maxmemoryPolicy: allkeys-lru
-
-databases:
-  - name: claywords-db
-    databaseName: claywords
-    user: claywords
-    plan: free
