@@ -1,0 +1,17 @@
+apiVersion: v2
+name: claywords
+description: ClayWords 陶瓷定制平台 Helm Chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - claywords
+  - ceramic
+  - ai
+  - ecommerce
+home: https://claywords.com
+sources:
+  - https://github.com/claywords/claywords
+maintainers:
+  - name: ClayWords Team
+    email: ops@claywords.com

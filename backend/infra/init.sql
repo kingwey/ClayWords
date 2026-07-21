@@ -1,0 +1,1 @@
+﻿-- ClayWords PostgreSQL Initialization Script

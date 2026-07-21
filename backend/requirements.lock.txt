@@ -1,0 +1,45 @@
+﻿# Production Requirements - Locked Versions
+# Phase Q10 P0: 依赖版本锁定
+# Generated: 2026-06-22
+
+# Core Framework
+fastapi==0.138.0
+uvicorn[standard]==0.49.0
+pydantic==2.13.4
+pydantic-settings==2.8.2
+
+# Database
+sqlalchemy[asyncio]==2.0.38
+alembic==1.18.4
+asyncpg==0.31.0
+
+# Cache & Queue
+redis==5.3.1
+arq==0.28.0
+
+# Logging
+structlog==26.1.0
+
+# Security & Auth
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
+cryptography==45.0.0
+
+# HTTP & File Upload
+httpx==0.28.1
+python-multipart==0.0.32
+
+# Object Storage
+boto3==1.43.34
+minio==7.2.14
+
+# Worker / craft_check (numpy 计算)
+numpy==2.2.1
+
+# Additional dependencies
+click==8.1.9
+starlette==0.45.3
+anyio==4.9.0
+idna==3.10
+sniffio==1.3.1
+typing-extensions==4.13.0

@@ -3,6 +3,8 @@
 import asyncio
 import json
 import structlog
+import os
+import sys
 from datetime import datetime
 from typing import Optional
 
@@ -13,6 +15,11 @@ from arq.utils import asyncio_run
 from .pipelines.template_pipeline import template_pipeline
 from .pipelines.generative_pipeline import generative_pipeline
 from .pipelines.hybrid_pipeline import hybrid_pipeline
+
+# Add backend to path to import TaskService
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+from app.services.tasks.task_service import TaskService, TASK_STATE_COMPLETED, TASK_STATE_FAILED
+from app.core.redis import get_redis
 
 
 structlog.configure(
@@ -57,6 +64,11 @@ async def process_design_gen(ctx: dict, session_id: str, design_params: dict, ta
     logger.info("processing_design_gen", session_id=session_id, task_id=task_id)
 
     redis = ctx.get("redis")
+
+    # Initialize TaskService for dual-write (Redis + PostgreSQL)
+    task_service = None
+    if redis:
+        task_service = TaskService(redis)
 
     # Report progress stages
     stages = [
@@ -132,25 +144,46 @@ async def process_design_gen(ctx: dict, session_id: str, design_params: dict, ta
         # Done
         await report_progress(ctx, task_id, "done", 100, "设计完成")
 
-        # Store results
-        if redis:
-            result_data = {
-                "status": "completed",
-                "options": [
-                    {
-                        "option_id": opt["result"].option_id,
-                        "name": opt["result"].name,
-                        "pipeline": opt["pipeline"],
-                        "glb_url": opt["result"].glb_url,
-                        "thumbnail_url": opt["result"].thumbnail_url,
-                        "craft_check": opt["result"].craft_check_result,
-                        "price": opt["result"].price,
-                        "estimated_days": opt["result"].estimated_days
-                    }
-                    for opt in options
-                ]
-            }
+        # Prepare result data
+        result_data = {
+            "status": "completed",
+            "options": [
+                {
+                    "option_id": opt["result"].option_id,
+                    "name": opt["result"].name,
+                    "pipeline": opt["pipeline"],
+                    "glb_url": opt["result"].glb_url,
+                    "thumbnail_url": opt["result"].thumbnail_url,
+                    "craft_check": opt["result"].craft_check_result,
+                    "price": opt["result"].price,
+                    "estimated_days": opt["result"].estimated_days
+                }
+                for opt in options
+            ]
+        }
+
+        # Store results with dual-write strategy
+        if task_service:
+            # 1. Write to PostgreSQL (persistent, primary storage)
+            await task_service.update_task_state(
+                task_id=task_id,
+                state=TASK_STATE_COMPLETED,
+                progress=100,
+                result=result_data,
+            )
+            logger.info("task_result_persisted_to_db", task_id=task_id)
+
+            # 2. Write to Redis (cache layer, 1 hour TTL)
+            await redis.set(
+                f"task:{task_id}:result",
+                json.dumps(result_data),
+                ex=3600
+            )
+            logger.info("task_result_cached_to_redis", task_id=task_id)
+        elif redis:
+            # Fallback: Redis only (backward compatibility)
             await redis.set(f"task:{task_id}:result", json.dumps(result_data), ex=3600)
+            logger.warning("task_result_redis_only", task_id=task_id, reason="task_service_unavailable")
 
         return {
             "status": "completed",
@@ -159,12 +192,33 @@ async def process_design_gen(ctx: dict, session_id: str, design_params: dict, ta
 
     except Exception as e:
         logger.error("design_gen_failed", task_id=task_id, error=str(e))
-        if redis:
-            error_data = {
-                "status": "failed",
-                "error": str(e)
-            }
+
+        error_data = {
+            "status": "failed",
+            "error": str(e)
+        }
+
+        # Store error with dual-write strategy
+        if task_service:
+            # 1. Write to PostgreSQL
+            await task_service.update_task_state(
+                task_id=task_id,
+                state=TASK_STATE_FAILED,
+                error_message=str(e),
+                result=error_data,
+            )
+            logger.info("task_error_persisted_to_db", task_id=task_id)
+
+            # 2. Write to Redis (cache layer)
+            await redis.set(
+                f"task:{task_id}:result",
+                json.dumps(error_data),
+                ex=3600
+            )
+        elif redis:
+            # Fallback: Redis only
             await redis.set(f"task:{task_id}:result", json.dumps(error_data), ex=3600)
+
         raise
 
 

@@ -239,12 +239,14 @@ def rank_studios(
 ) -> list[tuple[StudioInfo, ScoreBreakdown]]:
     """
     Rank studios by total score (descending).
-    
+
     Returns list of (studio, score_breakdown) tuples.
     """
+    # 兼容 weights=None：内部 score_studio 期望非 None dict
+    effective_weights = weights if weights is not None else DEFAULT_WEIGHTS
     scored = []
     for studio in studios:
-        breakdown = score_studio(studio, params, weights, target_locations)
+        breakdown = score_studio(studio, params, effective_weights, target_locations)
         if breakdown.total > 0:  # Only include studios passing hard constraints
             scored.append((studio, breakdown))
     

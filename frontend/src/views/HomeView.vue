@@ -62,56 +62,11 @@
         <div class="visual-chip chip-2">月形花瓶</div>
         <div class="visual-chip chip-3">三孔香插</div>
         <div class="visual-chip chip-4">怀宠橘猫</div>
-        <svg class="hero-ceramic" viewBox="0 0 400 500">
-          <defs>
-            <linearGradient id="vaseBody" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#f5f0e8" />
-              <stop offset="35%" stop-color="#e8d5c0" />
-              <stop offset="70%" stop-color="#c97b5a" />
-              <stop offset="100%" stop-color="#7a4a32" />
-            </linearGradient>
-            <radialGradient id="vaseHighlight" cx="30%" cy="25%" r="45%">
-              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55" />
-              <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
-            </radialGradient>
-            <filter id="vaseShadow" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="20" stdDeviation="18" flood-color="#2a2420" flood-opacity="0.22" />
-            </filter>
-          </defs>
-          <!-- 底部阴影 -->
-          <ellipse cx="200" cy="465" rx="130" ry="14" fill="rgba(42,36,32,0.12)" />
-          <!-- 瓶身 -->
-          <path
-            filter="url(#vaseShadow)"
-            d="M 200 60
-               Q 175 70 170 110
-               Q 130 150 120 210
-               Q 105 300 130 390
-               Q 145 450 200 455
-               Q 255 450 270 390
-               Q 295 300 280 210
-               Q 270 150 230 110
-               Q 225 70 200 60 Z"
-            fill="url(#vaseBody)"
-            stroke="rgba(42,36,32,0.15)"
-            stroke-width="1"
-          />
-          <!-- 高光 -->
-          <ellipse cx="165" cy="230" rx="18" ry="110" fill="url(#vaseHighlight)" />
-          <!-- 瓶口 -->
-          <ellipse cx="200" cy="62" rx="24" ry="7" fill="#fffdf9" stroke="rgba(42,36,32,0.2)" stroke-width="1" />
-          <ellipse cx="200" cy="60" rx="24" ry="7" fill="#e8d5c0" />
-          <!-- 桂花点缀 -->
-          <g opacity="0.55">
-            <circle cx="185" cy="180" r="4" fill="#d4a574" />
-            <circle cx="225" cy="220" r="3.5" fill="#d4a574" />
-            <circle cx="175" cy="290" r="3.5" fill="#d4a574" />
-            <circle cx="230" cy="330" r="4" fill="#d4a574" />
-            <circle cx="190" cy="370" r="3" fill="#d4a574" />
-          </g>
-          <!-- 墨绿文字装饰 -->
-          <text x="200" y="420" text-anchor="middle" fill="#2d4a48" font-family="Songti SC, serif" font-size="14" opacity="0.7" letter-spacing="4">陶语 · 定制</text>
-        </svg>
+        <img
+          src="@/assets/hero-ceramic.png"
+          alt="陶语定制陶瓷 - 兔月香薰瓶"
+          class="hero-ceramic-img"
+        />
       </div>
     </section>
 
@@ -182,55 +137,11 @@
         <!-- 右侧：产品预览 -->
         <div class="demo-preview">
           <div class="preview-float">
-            <svg class="preview-svg" viewBox="0 0 300 380">
-              <defs>
-                <linearGradient id="rabbitBody" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#fafafa" />
-                  <stop offset="50%" stop-color="#ece0d0" />
-                  <stop offset="100%" stop-color="#b8a08a" />
-                </linearGradient>
-                <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stop-color="#fffaf0" stop-opacity="1" />
-                  <stop offset="60%" stop-color="#f5f0e8" stop-opacity="0.95" />
-                  <stop offset="100%" stop-color="#d4a574" stop-opacity="0.35" />
-                </radialGradient>
-                <filter id="rShadow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#2a2420" flood-opacity="0.18" />
-                </filter>
-              </defs>
-
-              <!-- 月亮底座 -->
-              <ellipse cx="150" cy="340" rx="95" ry="10" fill="rgba(42,36,32,0.12)" />
-              <ellipse filter="url(#rShadow)" cx="150" cy="260" rx="90" ry="75" fill="url(#moonGlow)" stroke="rgba(212,165,116,0.4)" stroke-width="1" />
-
-              <!-- 兔子身体 -->
-              <ellipse filter="url(#rShadow)" cx="150" cy="290" rx="55" ry="45" fill="url(#rabbitBody)" stroke="rgba(42,36,32,0.15)" stroke-width="1" />
-              <!-- 兔头 -->
-              <ellipse filter="url(#rShadow)" cx="150" cy="240" rx="34" ry="30" fill="url(#rabbitBody)" stroke="rgba(42,36,32,0.15)" stroke-width="1" />
-              <!-- 长耳 -->
-              <ellipse filter="url(#rShadow)" cx="130" cy="185" rx="9" ry="38" fill="url(#rabbitBody)" transform="rotate(-8 130 185)" stroke="rgba(42,36,32,0.15)" stroke-width="1" />
-              <ellipse filter="url(#rShadow)" cx="170" cy="185" rx="9" ry="38" fill="url(#rabbitBody)" transform="rotate(8 170 185)" stroke="rgba(42,36,32,0.15)" stroke-width="1" />
-              <!-- 内耳 -->
-              <ellipse cx="130" cy="190" rx="4" ry="26" fill="#e8c9b8" transform="rotate(-8 130 190)" />
-              <ellipse cx="170" cy="190" rx="4" ry="26" fill="#e8c9b8" transform="rotate(8 170 190)" />
-              <!-- 眼睛 -->
-              <circle cx="140" cy="242" r="3" fill="#2a2420" />
-              <circle cx="160" cy="242" r="3" fill="#2a2420" />
-              <!-- 鼻 -->
-              <path d="M 147 256 Q 150 259 153 256" stroke="#2a2420" stroke-width="1.8" fill="none" />
-              <!-- 腮红 -->
-              <circle cx="128" cy="258" r="4" fill="#e8a598" opacity="0.4" />
-              <circle cx="172" cy="258" r="4" fill="#e8a598" opacity="0.4" />
-              <!-- 桂花点缀 -->
-              <g opacity="0.75">
-                <circle cx="120" cy="140" r="3" fill="#d4a574" />
-                <circle cx="180" cy="150" r="3" fill="#d4a574" />
-                <circle cx="105" cy="330" r="3" fill="#d4a574" />
-                <circle cx="195" cy="330" r="3" fill="#d4a574" />
-                <circle cx="110" cy="310" r="2" fill="#d4a574" />
-                <circle cx="190" cy="315" r="2" fill="#d4a574" />
-              </g>
-            </svg>
+            <img
+              src="@/assets/玉兔捧月.png"
+              alt="玉兔捧月 - 陶瓷摆件"
+              class="preview-img"
+            />
           </div>
           <div class="preview-caption">
             <div class="caption-title text-display">玉兔捧月</div>
@@ -738,13 +649,14 @@ function goDesign() {
 .visual-ring::before { inset: 40px; }
 .visual-ring::after { inset: 80px; border-color: rgba(45, 74, 72, 0.1); }
 
-.hero-ceramic {
+.hero-ceramic-img {
   width: 380px;
   max-width: 100%;
   height: auto;
   position: relative;
   z-index: 2;
   animation: float 5s ease-in-out infinite;
+  object-fit: contain;
 }
 
 .visual-chip {
@@ -926,10 +838,11 @@ function goDesign() {
   animation: float 4.5s ease-in-out infinite;
 }
 
-.preview-svg {
+.preview-img {
   width: 340px;
   max-width: 100%;
   height: auto;
+  object-fit: contain;
   filter: drop-shadow(0 16px 40px rgba(42, 36, 32, 0.18));
 }
 
@@ -1378,7 +1291,7 @@ function goDesign() {
   .hero-cta { justify-content: center; }
   .hero-stats { margin-left: auto; margin-right: auto; }
   .hero-visual { min-height: 400px; }
-  .hero-ceramic { width: 280px; }
+  .hero-ceramic-img { width: 280px; }
 
   .problem-grid { grid-template-columns: 1fr; }
   .flow-grid { grid-template-columns: repeat(2, 1fr); }

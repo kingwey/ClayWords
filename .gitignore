@@ -34,6 +34,7 @@ env/
 # Testing
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
 
 # Docker
@@ -45,6 +46,7 @@ htmlcov/
 
 # Logs
 *.log
+*.log.*
 logs/
 
 # Database

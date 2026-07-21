@@ -16,7 +16,6 @@ from .scoring import (
 from .policy import (
     DispatchResult,
     DISPATCH_THRESHOLD,
-    CENTRAL_STUDIO_ID,
     should_dispatch,
     select_best_studio,
     dispatch_order,
@@ -45,7 +44,6 @@ __all__ = [
     # Policy
     "DispatchResult",
     "DISPATCH_THRESHOLD",
-    "CENTRAL_STUDIO_ID",
     "should_dispatch",
     "select_best_studio",
     "dispatch_order",

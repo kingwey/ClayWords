@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>陶语 ClayWords · 一句话烧出专属陶瓷 · AI 创造力大赛初赛 Demo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#faf6f0; --bg2:#f3ebe0; --surface:#fffdf9;
+  --ink:#2a2420; --muted:#8a7d6f; --tertiary:#a89a8a;
+  --primary:#2d4a48; --primary-dark:#1e3533; --primary-light:#5a8a88;
+  --accent:#c97b5a; --accent-dark:#a55d3f; --accent-light:#e8c9b8;
+  --secondary:#d4a574;
+  --success:#5b8a72; --error:#c75b5b;
+  --line:#e5dccf; --line-light:#eee7db;
+  --glaze-white:#f5f0e8; --glaze-celadon:#7b9ba8; --glaze-jade:#5b8a72;
+  --glaze-red:#c75b5b; --glaze-tenmoku:#2d2926; --glaze-gold:#d4a574;
+  --shadow-sm:0 2px 6px rgba(42,36,32,.05);
+  --shadow-md:0 4px 12px rgba(42,36,32,.06);
+  --shadow-lg:0 8px 24px rgba(42,36,32,.08);
+  --shadow-xl:0 16px 48px rgba(42,36,32,.10);
+}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased}
+.display{font-family:"Songti SC","STSong","SimSun","Noto Serif SC",serif;letter-spacing:.05em}
+.mono{font-family:"JetBrains Mono","SF Mono","Consolas",monospace}
+.wrap{max-width:1200px;margin:0 auto;padding:0 32px}
+::selection{background:rgba(201,123,90,.25);color:var(--primary)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg2);border-radius:4px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent-light)}
+.nav{padding:18px 0;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(250,246,240,.92);backdrop-filter:blur(10px);z-index:50}
+.nav-inner{display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:"Songti SC",serif;font-size:24px;font-weight:700;letter-spacing:6px;color:var(--primary)}
+.logo span{color:var(--accent)}
+.logo small{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:2px;color:var(--muted);font-weight:400;margin-left:8px}
+.nav ul{display:flex;gap:28px;list-style:none}
+.nav a{color:var(--muted);text-decoration:none;font-size:14px;transition:color .2s;letter-spacing:1px}
+.nav a:hover{color:var(--accent)}
+.nav-cta{padding:8px 18px;background:var(--primary);color:#fff;border-radius:999px;font-size:13px;letter-spacing:1px;text-decoration:none;transition:all .2s}
+.nav-cta:hover{background:var(--primary-dark);transform:translateY(-1px)}
+section{padding:80px 0;border-top:1px solid var(--line);position:relative}
+.kicker{display:inline-block;font-size:12px;color:var(--accent);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;font-family:"JetBrains Mono",monospace;font-weight:600}
+h2{font-family:"Songti SC",serif;font-size:36px;font-weight:700;color:var(--primary);letter-spacing:3px;margin-bottom:14px;line-height:1.3}
+.sub{color:var(--muted);font-size:16px;max-width:720px;margin-bottom:48px;line-height:1.9}
+
+/* ===== Hero ===== */
+.hero{padding:90px 0 70px;position:relative;overflow:hidden;background:radial-gradient(ellipse at 15% 20%,rgba(201,123,90,.08),transparent 50%),radial-gradient(ellipse at 85% 80%,rgba(123,155,168,.08),transparent 50%)}
+.hero-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:48px;align-items:center}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;background:rgba(201,123,90,.08);border:1px solid rgba(201,123,90,.18);border-radius:999px;font-size:13px;color:var(--accent-dark);font-family:"JetBrains Mono",monospace;letter-spacing:.5px;margin-bottom:24px}
+.hero-tag::before{content:"";width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+h1{font-family:"Songti SC",serif;font-size:60px;line-height:1.2;font-weight:800;margin-bottom:20px;color:var(--primary);letter-spacing:4px}
+h1 em{font-style:normal;color:var(--accent);position:relative;display:inline-block}
+h1 em::after{content:"";position:absolute;left:-4px;right:-4px;bottom:6px;height:14px;background:rgba(201,123,90,.20);z-index:-1;border-radius:4px}
+.hero-lead{font-size:17px;color:var(--muted);max-width:540px;margin-bottom:36px;line-height:2}
+.cta{display:inline-flex;gap:14px;flex-wrap:wrap}
+.btn{padding:14px 28px;border-radius:999px;font-size:14px;font-weight:600;text-decoration:none;transition:all .25s;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;letter-spacing:1px}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:0 6px 20px rgba(45,74,72,.25)}
+.btn-primary:hover{background:var(--primary-dark);transform:translateY(-2px);box-shadow:0 10px 28px rgba(45,74,72,.32)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.hero-stats{display:flex;align-items:center;gap:32px;margin-top:44px;padding:20px 28px;background:var(--surface);border:1px solid var(--line-light);border-radius:24px;max-width:560px;box-shadow:var(--shadow-sm)}
+.hero-stats .item{flex:1}
+.hero-stats .n{font-family:"Songti SC",serif;font-size:28px;font-weight:700;color:var(--primary);line-height:1;letter-spacing:1px}
+.hero-stats .l{font-size:11px;color:var(--tertiary);font-family:"JetBrains Mono",monospace;letter-spacing:1.5px;margin-top:4px}
+.hero-stats .sep{width:1px;height:36px;background:var(--line-light)}
+
+.hero-visual{position:relative;display:flex;align-items:center;justify-content:center;min-height:480px}
+.visual-ring{position:absolute;width:440px;height:440px;border:1px solid var(--line-light);border-radius:50%}
+.visual-ring::before,.visual-ring::after{content:"";position:absolute;border:1px dashed rgba(201,123,90,.2);border-radius:50%}
+.visual-ring::before{inset:36px}
+.visual-ring::after{inset:74px;border-color:rgba(45,74,72,.1)}
+.hero-svg{width:340px;max-width:100%;height:auto;position:relative;z-index:2;animation:float 5s ease-in-out infinite;filter:drop-shadow(0 16px 40px rgba(42,36,32,.18))}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.chip{position:absolute;padding:8px 16px;background:var(--surface);border:1px solid var(--line-light);border-radius:999px;font-family:"Songti SC",serif;font-size:13px;color:var(--primary);box-shadow:var(--shadow-md);z-index:3;animation:float 6s ease-in-out infinite;letter-spacing:2px}
+.chip-1{top:6%;left:-2%;animation-delay:0s}
+.chip-2{top:18%;right:-4%;animation-delay:1s}
+.chip-3{bottom:18%;left:-4%;animation-delay:2s}
+.chip-4{bottom:6%;right:0%;animation-delay:1.5s}
+
+/* ===== 痛点卡片 ===== */
+.problems{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.p-card{position:relative;padding:32px;background:var(--surface);border:1px solid var(--line-light);border-radius:24px;transition:all .25s}
+.p-card:hover{transform:translateY(-4px);border-color:var(--accent-light);box-shadow:var(--shadow-lg)}
+.p-card .num{display:inline-block;padding:4px 12px;background:rgba(201,123,90,.1);color:var(--accent-dark);border-radius:999px;font-size:12px;font-family:"JetBrains Mono",monospace;letter-spacing:1px;margin-bottom:14px}
+.p-card h3{font-family:"Songti SC",serif;font-size:18px;font-weight:600;color:var(--primary);margin-bottom:12px;letter-spacing:2px}
+.p-card p{color:var(--muted);font-size:14px;line-height:1.9}
+
+/* ===== Demo 演示 ===== */
+.demo-panel{display:grid;grid-template-columns:1fr 1fr;gap:32px;padding:40px;background:linear-gradient(135deg,var(--surface) 0%,#f5efe2 100%);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow-lg);align-items:center}
+.chat{display:flex;flex-direction:column;gap:14px}
+.msg{padding:14px 18px;border-radius:18px;font-size:14px;line-height:1.9;animation:fadeInUp .6s ease both}
+.msg.user{background:var(--primary);color:#fff;margin-left:18%;border-bottom-right-radius:6px;box-shadow:0 4px 14px rgba(45,74,72,.2)}
+.msg.bot{background:var(--surface);color:var(--ink);margin-right:8%;border:1px solid var(--line-light);border-bottom-left-radius:6px}
+.msg.bot strong{color:var(--accent-dark);font-family:"Songti SC",serif;letter-spacing:1px}
+.msg.bot b{color:var(--accent-dark)}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.input-bar{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--surface);border:1px dashed var(--line);border-radius:18px;margin-top:12px}
+.input-bar .ph{flex:1;color:var(--tertiary);font-size:14px}
+.input-bar .send-b{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:none;border-radius:50%;background:var(--accent);color:#fff;cursor:pointer;box-shadow:0 4px 12px rgba(201,123,90,.3)}
+
+.preview{text-align:center}
+.preview .float-box{display:inline-block;padding:24px;animation:float 4.5s ease-in-out infinite}
+.preview svg{width:320px;max-width:100%;height:auto;filter:drop-shadow(0 16px 40px rgba(42,36,32,.18))}
+.preview .cap{margin-top:14px}
+.preview .cap-t{font-family:"Songti SC",serif;font-size:22px;color:var(--primary);letter-spacing:6px}
+.preview .cap-m{font-size:13px;color:var(--muted);font-family:"JetBrains Mono",monospace;letter-spacing:1px;margin-top:6px}
+
+/* ===== 五步链路 ===== */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;position:relative}
+.step{position:relative;text-align:center;padding:28px 18px;background:var(--surface);border:1px solid var(--line-light);border-radius:18px;transition:all .25s}
+.step:hover{transform:translateY(-4px);border-color:var(--accent-light);box-shadow:var(--shadow-md)}
+.step .icon{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;margin:0 auto 16px;background:linear-gradient(135deg,rgba(45,74,72,.08),rgba(201,123,90,.08));border-radius:16px;font-family:"Songti SC",serif;font-size:20px;font-weight:600;color:var(--primary)}
+.step h4{font-family:"Songti SC",serif;font-size:15px;font-weight:600;color:var(--primary);margin-bottom:8px;letter-spacing:2px}
+.step p{font-size:12px;color:var(--muted);line-height:1.7}
+.step:not(:last-child)::after{content:"→";position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--accent);font-size:18px;font-weight:300;background:var(--surface);width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--line-light);z-index:2}
+
+/* ===== 模块矩阵 ===== */
+.matrix{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.m-card{padding:24px;background:var(--surface);border:1px solid var(--line-light);border-radius:18px;transition:all .25s;display:flex;flex-direction:column;gap:8px}
+.m-card:hover{transform:translateY(-2px);border-color:var(--accent-light);box-shadow:var(--shadow-md)}
+.m-card .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.m-card .name{font-family:"Songti SC",serif;font-size:16px;font-weight:600;color:var(--primary);letter-spacing:2px}
+.m-card .pill{padding:2px 10px;background:rgba(91,138,114,.15);color:var(--success);border-radius:999px;font-size:11px;font-family:"JetBrains Mono",monospace;letter-spacing:.5px}
+.m-card .pill.warn{background:rgba(212,165,116,.18);color:var(--accent-dark)}
+.m-card .desc{color:var(--muted);font-size:13px;line-height:1.8;flex:1}
+.m-card .meta{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--tertiary);letter-spacing:.5px;padding-top:8px;border-top:1px dashed var(--line-light)}
+
+/* ===== 工艺校验亮点 ===== */
+.craft-block{display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center;padding:48px;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;border-radius:28px;position:relative;overflow:hidden;box-shadow:var(--shadow-xl)}
+.craft-block::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 15% 80%,rgba(201,123,90,.25),transparent 50%),radial-gradient(circle at 85% 20%,rgba(212,165,116,.15),transparent 50%);pointer-events:none}
+.craft-left{position:relative;z-index:1}
+.craft-left .kicker{color:var(--secondary)}
+.craft-left h3{font-family:"Songti SC",serif;font-size:32px;line-height:1.5;letter-spacing:3px;margin-bottom:20px;font-weight:700}
+.craft-left p{color:rgba(245,240,232,.85);font-size:15px;line-height:1.9;margin-bottom:14px}
+.craft-rules{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px}
+.rule-card{padding:18px;background:rgba(255,253,249,.06);border:1px solid rgba(255,253,249,.12);border-radius:14px}
+.rule-card .rn{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--secondary);letter-spacing:1px;margin-bottom:6px}
+.rule-card .rt{font-family:"Songti SC",serif;font-size:15px;color:#fff;letter-spacing:1px;margin-bottom:6px}
+.rule-card .rd{font-size:12px;color:rgba(245,240,232,.7);line-height:1.7}
+.craft-right{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.metric{padding:22px;background:rgba(255,253,249,.06);border:1px solid rgba(255,253,249,.12);border-radius:18px;transition:all .25s}
+.metric:hover{background:rgba(255,253,249,.1);transform:translateY(-2px)}
+.metric .mn{font-family:"Songti SC",serif;font-size:34px;color:var(--secondary);font-weight:700;line-height:1;letter-spacing:1px}
+.metric .mn .u{font-size:.5em;color:rgba(245,240,232,.7);margin-left:2px}
+.metric .ml{font-size:12px;color:rgba(245,240,232,.75);line-height:1.6;letter-spacing:.5px;margin-top:8px}
+
+/* ===== 派单可视化 ===== */
+.dispatch{display:grid;grid-template-columns:1fr 1.4fr;gap:36px;align-items:center}
+.dispatch-text h3{font-family:"Songti SC",serif;font-size:26px;color:var(--primary);letter-spacing:3px;margin-bottom:14px}
+.dispatch-text p{color:var(--muted);line-height:2;margin-bottom:16px;font-size:15px}
+.dispatch-text .formula{background:var(--bg2);border-left:3px solid var(--accent);border-radius:8px;padding:14px 18px;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink);letter-spacing:.5px;line-height:1.9}
+
+.studios{display:flex;flex-direction:column;gap:14px}
+.s-row{display:grid;grid-template-columns:170px 1fr 60px;gap:16px;align-items:center;padding:16px 20px;background:var(--surface);border:1px solid var(--line-light);border-radius:14px;transition:all .25s}
+.s-row.winner{border-color:var(--secondary);background:linear-gradient(135deg,rgba(212,165,116,.08) 0%,rgba(212,165,116,.02) 100%);box-shadow:var(--shadow-md)}
+.s-row.winner .s-name{color:var(--accent-dark);font-weight:600}
+.s-name{font-family:"Songti SC",serif;font-size:14px;color:var(--ink);letter-spacing:1px}
+.s-bars{display:flex;gap:6px;align-items:flex-end;height:38px}
+.bar{flex:1;background:var(--bg2);border-radius:4px;position:relative;overflow:hidden}
+.bar i{position:absolute;left:0;right:0;bottom:0;border-radius:4px;background:var(--bar-color);animation:barGrow .9s ease-out forwards;transform-origin:bottom}
+@keyframes barGrow{from{height:0}to{height:var(--bar-h)}}
+.bar:nth-child(1){--bar-color:var(--accent)}
+.bar:nth-child(2){--bar-color:var(--glaze-celadon)}
+.bar:nth-child(3){--bar-color:var(--glaze-jade)}
+.bar:nth-child(4){--bar-color:var(--secondary)}
+.s-score{font-family:"JetBrains Mono",monospace;font-size:18px;font-weight:700;color:var(--primary);text-align:right;letter-spacing:1px}
+.s-row.winner .s-score{color:var(--accent-dark)}
+.s-row .crown{position:absolute;left:-10px;top:-10px;width:24px;height:24px;background:var(--secondary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;display:none}
+.s-row.winner{position:relative}
+.s-row.winner .crown{display:flex}
+
+.dim-legend{display:flex;gap:18px;margin-top:24px;flex-wrap:wrap}
+.dim-legend .ld{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-family:"JetBrains Mono",monospace;letter-spacing:.5px}
+.dim-legend .dot{width:12px;height:12px;border-radius:50%}
+
+/* ===== 釉色色板 ===== */
+.glazes{display:grid;grid-template-columns:repeat(6,1fr);gap:18px}
+.glaze{aspect-ratio:1;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .25s;border:3px solid var(--surface);box-shadow:var(--shadow-md);position:relative;overflow:hidden}
+.glaze::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.4),transparent 60%)}
+.glaze:hover{transform:translateY(-4px) scale(1.05);box-shadow:var(--shadow-lg)}
+.glaze .gn{font-family:"Songti SC",serif;font-size:14px;letter-spacing:3px;text-shadow:0 2px 6px rgba(0,0,0,.3);position:relative;z-index:1}
+.g1{background:linear-gradient(135deg,#f5f0e8 0%,#ece0d0 60%,#b8a08a 100%);color:var(--primary)}
+.g2{background:linear-gradient(135deg,#9ec6d0 0%,#7B9BA8 60%,#4a6e7a 100%);color:#fff}
+.g3{background:linear-gradient(135deg,#a8d4b8 0%,#5B8A72 60%,#2a5a48 100%);color:#fff}
+.g4{background:linear-gradient(135deg,#e8a598 0%,#c75b5b 60%,#8a2a2a 100%);color:#fff}
+.g5{background:linear-gradient(135deg,#5a4a3a 0%,#2d2926 60%,#1a1513 100%);color:#fff}
+.g6{background:linear-gradient(135deg,#f3d5a4 0%,#d4a574 60%,#8a6a3a 100%);color:#fff}
+
+/* ===== 工单印章 ===== */
+.workorder{display:grid;grid-template-columns:1fr 1.2fr;gap:36px;align-items:center}
+.wo-card{position:relative;padding:36px;background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow-lg);max-width:420px}
+.wo-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--primary);padding-bottom:14px;margin-bottom:18px}
+.wo-brand{font-family:"Songti SC",serif;font-size:24px;font-weight:700;color:var(--primary);letter-spacing:6px}
+.wo-brand span{color:var(--accent)}
+.wo-no{text-align:right;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);letter-spacing:1px}
+.wo-no .num{color:var(--accent);font-weight:700;font-size:13px;letter-spacing:2px}
+.wo-title{font-family:"Songti SC",serif;font-size:20px;color:var(--primary);letter-spacing:4px;margin-bottom:18px}
+.wo-kv{display:grid;grid-template-columns:80px 1fr;row-gap:6px;column-gap:12px;font-size:13px;margin-bottom:14px}
+.wo-kv .k{color:var(--muted)}
+.wo-kv .v{color:var(--ink);font-weight:600}
+.wo-tags{display:flex;flex-wrap:wrap;gap:6px}
+.wo-tag{padding:3px 10px;background:rgba(45,74,72,.06);color:var(--primary);border-radius:999px;font-size:11px;font-family:"JetBrains Mono",monospace;letter-spacing:.5px}
+.wo-seal{position:absolute;right:30px;bottom:30px;width:90px;height:90px;border:3px solid var(--error);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--error);font-family:"Songti SC",serif;font-size:14px;font-weight:700;letter-spacing:4px;transform:rotate(-15deg);opacity:.85}
+
+.wo-text h3{font-family:"Songti SC",serif;font-size:26px;color:var(--primary);letter-spacing:3px;margin-bottom:14px}
+.wo-text p{color:var(--muted);line-height:2;margin-bottom:14px;font-size:15px}
+.wo-text ul{list-style:none;padding:0;margin-top:18px}
+.wo-text li{padding:10px 0;border-bottom:1px dashed var(--line);font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px}
+.wo-text li::before{content:"●";color:var(--accent);font-size:10px}
+
+/* ===== TRAE 实践 ===== */
+.trae{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.trae-step{padding:28px;background:var(--surface);border:1px solid var(--line-light);border-radius:18px;border-left:3px solid var(--accent);transition:all .25s}
+.trae-step:hover{transform:translateX(4px);box-shadow:var(--shadow-md)}
+.trae-step .sn{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);letter-spacing:2px;margin-bottom:8px}
+.trae-step h4{font-family:"Songti SC",serif;font-size:16px;color:var(--primary);letter-spacing:2px;margin-bottom:8px}
+.trae-step p{font-size:13px;color:var(--muted);line-height:1.9}
+
+/* ===== 体验地址 ===== */
+.experience{padding:48px;background:linear-gradient(135deg,var(--surface) 0%,#f5efe2 100%);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow-lg)}
+.exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:flex-start}
+.exp-left h3{font-family:"Songti SC",serif;font-size:22px;color:var(--primary);letter-spacing:3px;margin-bottom:18px}
+.exp-left pre{background:var(--primary-dark);color:#f3d4c1;border-radius:12px;padding:18px 20px;font-family:"JetBrains Mono",monospace;font-size:12px;line-height:1.8;overflow-x:auto;letter-spacing:.3px}
+.exp-left pre .c{color:#a89a8a}
+.exp-left pre .y{color:var(--secondary)}
+.exp-right h3{font-family:"Songti SC",serif;font-size:18px;color:var(--primary);letter-spacing:3px;margin-bottom:14px}
+.accounts{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.acc{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--bg2);border:1px solid var(--line);border-radius:14px;font-family:"JetBrains Mono",monospace;font-size:13px}
+.acc .role{font-family:"Songti SC",serif;color:var(--primary);letter-spacing:2px;font-size:14px}
+.acc .num{color:var(--accent);font-weight:700;letter-spacing:1px}
+.path{display:flex;flex-direction:column;gap:10px}
+.path-step{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted);line-height:1.6}
+.path-step .pn{flex-shrink:0;width:22px;height:22px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:"JetBrains Mono",monospace}
+
+/* ===== Footer ===== */
+.footer{padding:48px 0;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:13px}
+.footer .seal{display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;font-family:"Songti SC",serif;font-size:22px;font-weight:700;border-radius:10px;margin-bottom:14px;box-shadow:0 4px 12px rgba(45,74,72,.3);letter-spacing:2px}
+.footer .name{font-family:"Songti SC",serif;font-size:18px;color:var(--primary);letter-spacing:6px;margin-bottom:6px}
+.footer .meta{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--tertiary);letter-spacing:1.5px}
+
+@media (max-width:1100px){
+  .hero-grid,.demo-panel,.craft-block,.dispatch,.workorder,.exp-grid{grid-template-columns:1fr}
+  .problems,.matrix,.trae{grid-template-columns:1fr}
+  .flow{grid-template-columns:repeat(2,1fr)}
+  .step:not(:last-child)::after{display:none}
+  h1{font-size:42px}
+  .nav ul{display:none}
+  .glazes{grid-template-columns:repeat(3,1fr)}
+}
+
+
+
+
+</style>
+</head>
+<body>
+
+<!-- ===== 顶部导航 ===== -->
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <div class="logo">陶<span>语</span><small>CLAYWORDS</small></div>
+    <ul>
+      <li><a href="#problem">痛点</a></li>
+      <li><a href="#demo">体验</a></li>
+      <li><a href="#flow">链路</a></li>
+      <li><a href="#craft">工艺校验</a></li>
+      <li><a href="#dispatch">智能派单</a></li>
+      <li><a href="#trae">TRAE 实践</a></li>
+    </ul>
+    <a class="nav-cta" href="#experience">本地启动 →</a>
+  </div>
+</nav>
+
+<!-- ===== Hero 区 ===== -->
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="hero-tag">AI 创造力大赛 · 生活娱乐 + 社会公益</span>
+      <h1>一句话，<em>烧</em>出一件<br>只属于你的陶瓷</h1>
+      <p class="hero-lead">陶语把"自然语言到陶瓷造型"的翻译交给大模型，把烧窑的事还给手艺人。从想法到收到实物，平均 7–10 天。</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#demo">看看怎么用 →</a>
+        <a class="btn btn-ghost" href="#trae">TRAE 实践过程</a>
+      </div>
+      <div class="hero-stats">
+        <div class="item"><div class="n">5</div><div class="l">产区合作</div></div>
+        <div class="sep"></div>
+        <div class="item"><div class="n">30s</div><div class="l">方案生成</div></div>
+        <div class="sep"></div>
+        <div class="item"><div class="n">7-10</div><div class="l">烧制天</div></div>
+        <div class="sep"></div>
+        <div class="item"><div class="n">6色</div><div class="l">可选釉色</div></div>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-ring"></div>
+      <div class="chip chip-1">玉兔捧月</div>
+      <div class="chip chip-2">月形花瓶</div>
+      <div class="chip chip-3">三孔香插</div>
+      <div class="chip chip-4">怀宠橘猫</div>
+      <svg class="hero-svg" viewBox="0 0 400 500">
+        <defs>
+          <linearGradient id="vase-body" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f5f0e8"/><stop offset="35%" stop-color="#e8d5c0"/>
+            <stop offset="70%" stop-color="#c97b5a"/><stop offset="100%" stop-color="#7a4a32"/>
+          </linearGradient>
+          <radialGradient id="vase-hl" cx="30%" cy="25%" r="45%">
+            <stop offset="0%" stop-color="#fff" stop-opacity=".55"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="vshadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="20" stdDeviation="18" flood-color="#2a2420" flood-opacity=".22"/>
+          </filter>
+        </defs>
+        <ellipse cx="200" cy="465" rx="130" ry="14" fill="rgba(42,36,32,.12)"/>
+        <path filter="url(#vshadow)" d="M 200 60 Q 175 70 170 110 Q 130 150 120 210 Q 105 300 130 390 Q 145 450 200 455 Q 255 450 270 390 Q 295 300 280 210 Q 270 150 230 110 Q 225 70 200 60 Z" fill="url(#vase-body)" stroke="rgba(42,36,32,.15)"/>
+        <ellipse cx="165" cy="230" rx="18" ry="110" fill="url(#vase-hl)"/>
+        <ellipse cx="200" cy="62" rx="24" ry="7" fill="#fffdf9" stroke="rgba(42,36,32,.2)"/>
+        <ellipse cx="200" cy="60" rx="24" ry="7" fill="#e8d5c0"/>
+        <g opacity=".55">
+          <circle cx="185" cy="180" r="4" fill="#d4a574"/><circle cx="225" cy="220" r="3.5" fill="#d4a574"/>
+          <circle cx="175" cy="290" r="3.5" fill="#d4a574"/><circle cx="230" cy="330" r="4" fill="#d4a574"/>
+          <circle cx="190" cy="370" r="3" fill="#d4a574"/>
+        </g>
+        <text x="200" y="420" text-anchor="middle" fill="#2d4a48" font-family="Songti SC,serif" font-size="14" opacity=".7" letter-spacing="4">陶语 · 定制</text>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<!-- ===== 痛点 ===== -->
+<section id="problem">
+  <div class="wrap">
+    <span class="kicker">问题</span>
+    <h2>想要一件"懂自己"的陶瓷，为什么这么难</h2>
+    <p class="sub">标品千篇一律，定制门槛又太高。我们调研了 60 位有定制需求的用户和 12 家中小陶瓷工作室，两端都在喊累。</p>
+    <div class="problems">
+      <div class="p-card">
+        <div class="num">需求侧 · 01</div>
+        <h3>找不到，也撞款</h3>
+        <p>电商平台陶瓷摆件高度同质化，想要"像我家橘猫坐在月亮上"这种叙事性造型，几乎搜不到。</p>
+      </div>
+      <div class="p-card">
+        <div class="num">需求侧 · 02</div>
+        <h3>沟通成本高得离谱</h3>
+        <p>找工作室定制平均要 5–8 轮文字+草图来回，效果还要等打样才能看到，定金一付就是沉没成本。</p>
+      </div>
+      <div class="p-card">
+        <div class="num">供给侧 · 03</div>
+        <h3>师傅 60% 时间在聊天</h3>
+        <p>中小工作室和非遗手艺人接单靠熟人和私域，沟通占掉大半精力，真正拉坯烧窑的时间被严重挤压。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 体验演示 ===== -->
+<section id="demo">
+  <div class="wrap">
+    <span class="kicker">产品体验</span>
+    <h2>对话式设计台 · 你描述，AI 拉坯</h2>
+    <p class="sub">输入一句自然语言，30 秒并行生成 3 个可旋转 3D 方案；满意就一键下单，工作室同步收到结构化工单。</p>
+    <div class="demo-panel">
+      <div class="chat">
+        <div class="msg user">想送妈妈一个生日礼物，她属兔，喜欢月亮和桂花，希望是冷白釉，放玄关。</div>
+        <div class="msg bot"><strong>陶语 · </strong>关键词解析：<br/>🐰 兔子造型 · 🌙 月亮意象 · 🌼 桂花纹样<br/>🎨 冷白釉 · 📐 玄关尺寸（建议 18–22cm）<br/><em style="color:#8a7d6f;font-size:12px">正在并行调用三条生成路线（A 模板 / B 生成式 / C 混合）…</em></div>
+        <div class="msg bot"><strong>陶语 · </strong>三个方案出炉啦：<br/>① <b>玉兔捧月</b>（坐姿，月亮中空可放干花）<br/>② <b>月下折桂</b>（兔耳化作桂枝）<br/>③ <b>望舒</b>（极简款，月牙底座）<br/>👉 点击右侧方案可旋转查看，选中后可微调细节。</div>
+        <div class="msg user">第①个，把兔子耳朵再长一点点。</div>
+        <div class="msg bot"><strong>陶语 · </strong>已调整 ✅ 工艺校验通过，报价 ¥386，景德镇·陶溪川·林师傅承接，预计 9 天到手。是否下单？</div>
+        <div class="input-bar">
+          <span class="ph">再来一句试试…</span>
+          <button class="send-b">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="preview">
+        <div class="float-box">
+          <svg viewBox="0 0 300 380">
+            <defs>
+              <linearGradient id="rb-body" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fafafa"/><stop offset="50%" stop-color="#ece0d0"/><stop offset="100%" stop-color="#b8a08a"/>
+              </linearGradient>
+              <radialGradient id="moon-glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#fffaf0"/><stop offset="60%" stop-color="#f5f0e8" stop-opacity=".95"/><stop offset="100%" stop-color="#d4a574" stop-opacity=".35"/>
+              </radialGradient>
+              <filter id="rsh" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#2a2420" flood-opacity=".18"/>
+              </filter>
+            </defs>
+            <ellipse cx="150" cy="340" rx="95" ry="10" fill="rgba(42,36,32,.12)"/>
+            <ellipse filter="url(#rsh)" cx="150" cy="260" rx="90" ry="75" fill="url(#moon-glow)" stroke="rgba(212,165,116,.4)"/>
+            <ellipse filter="url(#rsh)" cx="150" cy="290" rx="55" ry="45" fill="url(#rb-body)" stroke="rgba(42,36,32,.15)"/>
+            <ellipse filter="url(#rsh)" cx="150" cy="240" rx="34" ry="30" fill="url(#rb-body)" stroke="rgba(42,36,32,.15)"/>
+            <ellipse filter="url(#rsh)" cx="130" cy="185" rx="9" ry="38" fill="url(#rb-body)" transform="rotate(-8 130 185)" stroke="rgba(42,36,32,.15)"/>
+            <ellipse filter="url(#rsh)" cx="170" cy="185" rx="9" ry="38" fill="url(#rb-body)" transform="rotate(8 170 185)" stroke="rgba(42,36,32,.15)"/>
+            <ellipse cx="130" cy="190" rx="4" ry="26" fill="#e8c9b8" transform="rotate(-8 130 190)"/>
+            <ellipse cx="170" cy="190" rx="4" ry="26" fill="#e8c9b8" transform="rotate(8 170 190)"/>
+            <circle cx="140" cy="242" r="3" fill="#2a2420"/><circle cx="160" cy="242" r="3" fill="#2a2420"/>
+            <path d="M 147 256 Q 150 259 153 256" stroke="#2a2420" stroke-width="1.8" fill="none"/>
+            <circle cx="128" cy="258" r="4" fill="#e8a598" opacity=".4"/><circle cx="172" cy="258" r="4" fill="#e8a598" opacity=".4"/>
+            <g opacity=".75">
+              <circle cx="120" cy="140" r="3" fill="#d4a574"/><circle cx="180" cy="150" r="3" fill="#d4a574"/>
+              <circle cx="105" cy="330" r="3" fill="#d4a574"/><circle cx="195" cy="330" r="3" fill="#d4a574"/>
+            </g>
+          </svg>
+        </div>
+        <div class="cap">
+          <div class="cap-t">玉兔捧月</div>
+          <div class="cap-m">¥386 · 冷白釉 · 18cm · 景德镇</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 五步技术链路 ===== -->
+<section id="flow">
+  <div class="wrap">
+    <span class="kicker">技术链路</span>
+    <h2>从一句话到一件瓷器，只有五步</h2>
+    <p class="sub">语义理解 → 方案生成 → 对话微调 → 智能派单 → 烧制配送，每一步都经过工艺校验。</p>
+    <div class="flow">
+      <div class="step"><div class="icon">壹</div><h4>语义理解</h4><p>大模型解析造型、釉色、尺寸、用途与情感意象</p></div>
+      <div class="step"><div class="icon">贰</div><h4>方案生成</h4><p>结合陶瓷工艺约束，生成三个可烧制的 3D 方案</p></div>
+      <div class="step"><div class="icon">叁</div><h4>对话微调</h4><p>所见即所得，一句话调整细节（耳朵再长一点）</p></div>
+      <div class="step"><div class="icon">肆</div><h4>智能派单</h4><p>按工艺、产能、地域匹配最合适的手艺人</p></div>
+      <div class="step"><div class="icon">伍</div><h4>烧制配送</h4><p>师傅烧窑 · 平台质检 · 顺丰直送</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 已实现模块矩阵 ===== -->
+<section>
+  <div class="wrap">
+    <span class="kicker">实现矩阵</span>
+    <h2>已落地、可演示的 11 个模块</h2>
+    <p class="sub">每个模块都附演示路径与代码位置，评审可对照仓库代码逐一验证。</p>
+    <div class="matrix">
+      <div class="m-card">
+        <div class="head"><span class="name">对话式设计台</span><span class="pill">已落地</span></div>
+        <p class="desc">三栏布局：聊天流 / 三方案卡片 / 3D 预览。骨架屏→浮现，釉色色环、版本树、调试面板齐全。</p>
+        <div class="meta">/design · DesignView.vue</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">语义解析</span><span class="pill">已落地</span></div>
+        <p class="desc">通义/OpenAI 双 provider · JSON Schema 强校验 · 黑名单 · LRU 缓存 · 101 条样本回归测试。</p>
+        <div class="meta">app/services/llm/parser.py</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">三路线生成</span><span class="pill">已落地</span></div>
+        <p class="desc">A 模板派生（最快 2s） / B 生成式 / C 混合，工艺校验串接、失败自动降级。</p>
+        <div class="meta">worker/pipelines/*</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">工艺校验</span><span class="pill">15 单测 ✓</span></div>
+        <p class="desc">壁厚（射线相交） + 悬臂（法线夹角） + 底面（投影占比） + 长宽比 + 收缩补偿 + 自动修复。</p>
+        <div class="meta">worker/craft_check/*</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">釉色实时切换</span><span class="pill">已落地</span></div>
+        <p class="desc">6 种釉色：瓷白 / 青瓷 / 玉青 / 胭脂红 / 天目 / 金箔。本地刷新无网络请求。</p>
+        <div class="meta">DesignView · changeGlaze()</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">方案版本树</span><span class="pill">已落地</span></div>
+        <p class="desc">微调 / 釉色切换自动落版本，时间轴可点击回滚到任意历史快照。</p>
+        <div class="meta">DesignView · pushVersion()</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">智能派单</span><span class="pill">已落地</span></div>
+        <p class="desc">工艺 / 产能 / 距离 / 评分四维加权 + 阈值 0.55 + 中央工作室兜底。</p>
+        <div class="meta">app/services/dispatch/*</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">订单状态机</span><span class="pill">已落地</span></div>
+        <p class="desc">12+ 节点状态机 + 合法迁移表 + 12 状态时间轴 + 状态变更日志。</p>
+        <div class="meta">app/services/order/state_machine.py</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">工单 PDF / HTML</span><span class="pill">已落地</span></div>
+        <p class="desc">完全对齐陶语色板（墨绿主色 + 陶土橙 + 印章），weasyprint 软依赖、不可用退化 HTML。</p>
+        <div class="meta">app/services/workorder/pdf.py</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">演示模式</span><span class="pill">已落地</span></div>
+        <p class="desc">?demo=true 命中预生成案例池；?demo_offline=true 完全离线；/demo/degrade 模拟 GPU 降级。</p>
+        <div class="meta">app/api/demo.py</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">JWT + 加密</span><span class="pill">已落地</span></div>
+        <p class="desc">JWT (HS256) + 手机号 AES-256-GCM + HMAC-SHA256 (pepper) UNIQUE 索引。</p>
+        <div class="meta">app/core/crypto.py</div>
+      </div>
+      <div class="m-card">
+        <div class="head"><span class="name">SSE 推送</span><span class="pill warn">部分</span></div>
+        <p class="desc">一次性票据 + EventSource 链路已搭，进度事件流计划接 Redis Stream（演示用进程内 Queue）。</p>
+        <div class="meta">app/api/sse.py · tasks.py</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 工艺校验亮点 ===== -->
+<section id="craft">
+  <div class="wrap">
+    <div class="craft-block">
+      <div class="craft-left">
+        <span class="kicker">差异化亮点 · 01</span>
+        <h3>把陶瓷的"看不见"约束<br/>写进生成流水线</h3>
+        <p>陶瓷有壁厚、悬臂、底面稳定、烧成收缩这些看不见的硬约束——壁厚不到 3mm 烧裂、悬臂超 30° 塌陷、底面投影比小于 0.15 立不稳、烧成尺寸还要按材质收缩 8%–18%。</p>
+        <p>陶语用 numpy 把这四个真算法实现出来：Möller–Trumbore 批量射线相交求壁厚、面法线 vs 重力夹角识别悬臂、XY 投影面积比 + 重心高度判稳、按白瓷/紫砂/粗陶分独立阈值。失败自动修复 + 复检，**这是 text-to-3D 玩具变成生产工具的关键**。</p>
+        <div class="craft-rules">
+          <div class="rule-card">
+            <div class="rn">RULE 01</div><div class="rt">壁厚 ≥ 3mm</div>
+            <div class="rd">射线相交批量采样，最薄处 < 阈值则触发外推修复</div>
+          </div>
+          <div class="rule-card">
+            <div class="rn">RULE 02</div><div class="rt">悬臂 ≤ 30°</div>
+            <div class="rd">面法线与重力夹角，朝上水平外伸面识别为悬臂</div>
+          </div>
+          <div class="rule-card">
+            <div class="rn">RULE 03</div><div class="rt">底面占比 ≥ 0.15</div>
+            <div class="rd">XY 投影面积比 + 重心高度比，头重脚轻惩罚</div>
+          </div>
+          <div class="rule-card">
+            <div class="rn">RULE 04</div><div class="rt">收缩补偿 1.08–1.18×</div>
+            <div class="rd">按白瓷 / 紫砂 / 粗陶不同材质，烧前预放大尺寸</div>
+          </div>
+        </div>
+      </div>
+      <div class="craft-right">
+        <div class="metric"><div class="mn">15<span class="u"> ✓</span></div><div class="ml">pytest 单测全 green<br/>覆盖 4 算法 + auto_fix + pipeline</div></div>
+        <div class="metric"><div class="mn">4<span class="u"> 种</span></div><div class="ml">材质独立阈值<br/>白瓷 / 紫砂 / 粗陶 / 青瓷</div></div>
+        <div class="metric"><div class="mn">3<span class="u"> 路</span></div><div class="ml">A 模板 / B 生成式 / C 混合<br/>失败自动降级到 A</div></div>
+        <div class="metric"><div class="mn">101<span class="u"> 条</span></div><div class="ml">语义解析样本回归集<br/>覆盖 7 大题材 + 边缘案例</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 智能派单 ===== -->
+<section id="dispatch">
+  <div class="wrap">
+    <span class="kicker">差异化亮点 · 02</span>
+    <h2>智能派单 · 不是把单丢出去，是把单匹配到最合适的手艺人</h2>
+    <p class="sub">四维加权打分：工艺匹配度 / 产能负载 / 地理距离 / 用户评分。阈值 0.55 以下走中央工作室兜底，演示视频里这一段动画评委一定记得住。</p>
+    <div class="dispatch">
+      <div class="dispatch-text">
+        <h3>四维加权 + 兜底链路</h3>
+        <p>每条订单匹配前先做硬约束剔除（材质 / 尺寸 / 工艺词），然后按 4 维加权打分，最高分胜出。当所有候选都 < 0.55 阈值时，自动落到中央工作室，避免演示翻车。</p>
+        <div class="formula">
+score = 0.40·craft + 0.30·capacity<br/>
+        + 0.20·geo  + 0.10·rating<br/>
+<br/>
+threshold = 0.55<br/>
+fallback  = 中央工作室
+        </div>
+        <div class="dim-legend">
+          <div class="ld"><span class="dot" style="background:var(--accent)"></span>工艺</div>
+          <div class="ld"><span class="dot" style="background:var(--glaze-celadon)"></span>产能</div>
+          <div class="ld"><span class="dot" style="background:var(--glaze-jade)"></span>距离</div>
+          <div class="ld"><span class="dot" style="background:var(--secondary)"></span>评分</div>
+        </div>
+      </div>
+      <div class="studios">
+        <div class="s-row winner">
+          <div class="s-name">景德镇 · 陶溪川 · 林师傅</div>
+          <div class="s-bars">
+            <div class="bar"><i style="--bar-h:88%"></i></div>
+            <div class="bar"><i style="--bar-h:75%"></i></div>
+            <div class="bar"><i style="--bar-h:90%"></i></div>
+            <div class="bar"><i style="--bar-h:96%"></i></div>
+          </div>
+          <div class="s-score">0.87</div>
+          <div class="crown">👑</div>
+        </div>
+        <div class="s-row">
+          <div class="s-name">景德镇 · 三宝村 · 青釉工坊</div>
+          <div class="s-bars">
+            <div class="bar"><i style="--bar-h:80%"></i></div>
+            <div class="bar"><i style="--bar-h:65%"></i></div>
+            <div class="bar"><i style="--bar-h:82%"></i></div>
+            <div class="bar"><i style="--bar-h:88%"></i></div>
+          </div>
+          <div class="s-score">0.78</div>
+        </div>
+        <div class="s-row">
+          <div class="s-name">德化 · 白瓷之都 · 陈氏制瓷</div>
+          <div class="s-bars">
+            <div class="bar"><i style="--bar-h:75%"></i></div>
+            <div class="bar"><i style="--bar-h:92%"></i></div>
+            <div class="bar"><i style="--bar-h:55%"></i></div>
+            <div class="bar"><i style="--bar-h:80%"></i></div>
+          </div>
+          <div class="s-score">0.72</div>
+        </div>
+        <div class="s-row">
+          <div class="s-name">宜兴 · 紫砂陶社 · 竹坞窑</div>
+          <div class="s-bars">
+            <div class="bar"><i style="--bar-h:70%"></i></div>
+            <div class="bar"><i style="--bar-h:60%"></i></div>
+            <div class="bar"><i style="--bar-h:50%"></i></div>
+            <div class="bar"><i style="--bar-h:85%"></i></div>
+          </div>
+          <div class="s-score">0.65</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 釉色色板 ===== -->
+<section>
+  <div class="wrap">
+    <span class="kicker">视觉系统</span>
+    <h2>六种釉色 · 一次拉通的设计 token 体系</h2>
+    <p class="sub">瓷白 / 青瓷 / 玉青 / 胭脂红 / 天目 / 金箔。前端把这六色固化为 CSS variables，方案选中后切换釉色纯本地刷新，无网络请求。</p>
+    <div class="glazes">
+      <div class="glaze g1"><span class="gn">瓷白</span></div>
+      <div class="glaze g2"><span class="gn">青瓷</span></div>
+      <div class="glaze g3"><span class="gn">玉青</span></div>
+      <div class="glaze g4"><span class="gn">胭脂红</span></div>
+      <div class="glaze g5"><span class="gn">天目</span></div>
+      <div class="glaze g6"><span class="gn">金箔</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 工单印章 ===== -->
+<section>
+  <div class="wrap">
+    <span class="kicker">交付物</span>
+    <h2>工单 PDF · 印章一盖，师傅就开始排窑</h2>
+    <p class="sub">派单成功后，平台生成结构化工单（含 GLB 链接、缩略图、工艺参数包、收货地址、印章），weasyprint 渲染 PDF，环境不可用时退化为可打印 HTML。</p>
+    <div class="workorder">
+      <div class="wo-card">
+        <div class="wo-head">
+          <div>
+            <div class="wo-brand">陶<span>语</span></div>
+            <div class="mono" style="font-size:10px;color:var(--muted);letter-spacing:3px;margin-top:4px">CLAYWORDS WORK ORDER</div>
+          </div>
+          <div class="wo-no">
+            <div>工单编号</div>
+            <div class="num">CW20260620-1234</div>
+            <div style="margin-top:4px">2026-06-20 14:00</div>
+          </div>
+        </div>
+        <div class="wo-title">玉兔捧月</div>
+        <div class="wo-kv">
+          <div class="k">工作室</div><div class="v">景德镇 · 陶溪川 · 林师傅</div>
+          <div class="k">交付日期</div><div class="v">约 9 天</div>
+          <div class="k">订单金额</div><div class="v">¥ 386</div>
+          <div class="k">材质</div><div class="v">porcelain_white · 冷白釉</div>
+          <div class="k">尺寸 (mm)</div><div class="v">200 × 160 × 160</div>
+        </div>
+        <div class="wo-tags">
+          <span class="wo-tag">壁厚 4±1mm</span>
+          <span class="wo-tag">窑温 1280℃</span>
+          <span class="wo-tag">还原焰 12h</span>
+          <span class="wo-tag">收缩 1.18×</span>
+          <span class="wo-tag">校验通过 ✓</span>
+        </div>
+        <div class="wo-seal">陶语已派</div>
+      </div>
+      <div class="wo-text">
+        <h3>结构化工单包含</h3>
+        <p>"沟通从 5–8 轮压到 1–2 轮"的关键，是把工艺参数标准化。师傅打开工单就能直接拉坯烧窑，不用再来回确认。</p>
+        <ul>
+          <li>3D 模型 GLB 链接（已通过工艺校验）</li>
+          <li>4 维工艺参数包（材质 / 尺寸 / 釉色 / 窑温 / 烧成曲线）</li>
+          <li>收货地址 + 用户备注</li>
+          <li>印章 + 二维码（扫码可看实时进度）</li>
+          <li>陶语品牌一致的视觉风格（墨绿 + 陶土橙 + 印章）</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TRAE 实践 ===== -->
+<section id="trae">
+  <div class="wrap">
+    <span class="kicker">TRAE 实践</span>
+    <h2>10 天 · 9 个 Phase · 130 条任务 · 一句话起步</h2>
+    <p class="sub">没系统做过 3D 工程，靠 TRAE 把模糊想法拆成 9 Phase 130 任务的清单，一段段陪我写代码。最让我惊喜的不只是"会写代码"，而是它逼着我把"演示版"和"上线版"分开思考。</p>
+    <div class="trae">
+      <div class="trae-step">
+        <div class="sn">STEP 01</div>
+        <h4>需求拆解与定位</h4>
+        <p>"自然语言 → 可烧制陶瓷"的目标讲给 TRAE，它帮我拆出需求侧 / 供给侧两条痛点链，并锁定 200–800 元客单价区间作为切入市场。</p>
+      </div>
+      <div class="trae-step">
+        <div class="sn">STEP 02</div>
+        <h4>任务清单与开发节奏</h4>
+        <p>把整个项目拆成 9 个 Phase、130 条任务的清单，按"基建 → 数据 → 解析 → 3D → SSE → 派单 → 前端 → 加分项 → 彩排"的顺序推进，每条任务都附验收标准。</p>
+      </div>
+      <div class="trae-step">
+        <div class="sn">STEP 03</div>
+        <h4>三路线技术评估</h4>
+        <p>对比纯模板库 / 纯 text-to-3D / 检索增强混合三条路线，最终采用"A 模板派生（稳）+ B 生成式（多样）+ C 混合（创新）"+ 工艺校验兜底的架构。</p>
+      </div>
+      <div class="trae-step">
+        <div class="sn">STEP 04</div>
+        <h4>核心模块编码</h4>
+        <p>语义解析（LLM + JSON Schema）+ 工艺校验（4 真算法 + 15 单测）+ 派单评分（4 维加权）+ 12 节点状态机 + SSE 票据机制，全部在 TRAE 协助下落地。</p>
+      </div>
+      <div class="trae-step">
+        <div class="sn">STEP 05</div>
+        <h4>前端三栏交互</h4>
+        <p>三栏布局 + 6 釉色实时切换 + 方案版本树 + 派单可视化动画 + 印章工单弹窗 + 师傅接单 toast，全部基于 CSS variables token 体系。</p>
+      </div>
+      <div class="trae-step">
+        <div class="sn">STEP 06</div>
+        <h4>演示鲁棒性</h4>
+        <p>TRAE 主动设计三层兜底（在线案例池 / 离线 fixture / GPU 降级）+ 三个一键登录账号，确保现场断网或服务故障仍能完整演示。</p>
+      </div>
+      <div class="trae-step">
+        <div class="sn">STEP 07</div>
+        <h4>代码审查</h4>
+        <p>用 TRAE 的并行 agent 全面扫码，发现实体字段错位、路由顺序冲突、SVG 插值语法等隐藏 bug，逐一修复后给出"DEMO 完整度优先"的演示前定向加固清单。</p>
+      </div>
+      <div class="trae-step">
+        <div class="sn">STEP 08</div>
+        <h4>本展示页生成</h4>
+        <p>"我想要一个温润、有质感的陶瓷风格站点，要包含对话式设计台 + 派单可视化 + 工单印章" — TRAE 直接生成这份完整 HTML，配色、布局、交互、SVG 一次到位。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 体验地址 ===== -->
+<section id="experience">
+  <div class="wrap">
+    <span class="kicker">本地体验</span>
+    <h2>一键启动 · 评审现场 90 秒走完黄金路径</h2>
+    <p class="sub">仓库地址、演示账号、黄金路径全部就位。任意环境都能跑（默认 SQLite + 内存 Queue），无需 Docker。</p>
+    <div class="experience">
+      <div class="exp-grid">
+        <div class="exp-left">
+          <h3>本地启动</h3>
+          <pre><span class="c"># 0. 克隆仓库</span>
+<span class="y">git clone</span> https://codeup.aliyun.com/68da5e06ab336f9c842acddc/AI/ClayWords.git
+<span class="y">cd</span> ClayWords
+
+<span class="c"># 1. 装依赖</span>
+<span class="y">pip install</span> -r backend/requirements.txt
+<span class="y">cd</span> frontend && <span class="y">npm install</span> && <span class="y">cd</span> ..
+
+<span class="c"># 2. seed 演示数据</span>
+<span class="y">make</span> db.seed
+<span class="y">python</span> scripts/seed_demo_orders.py
+
+<span class="c"># 3. 启服务</span>
+<span class="y">cd</span> backend && <span class="y">uvicorn</span> app.main:app --port 8000
+<span class="y">cd</span> frontend && <span class="y">npm</span> run dev   <span class="c"># :5173</span></pre>
+        </div>
+        <div class="exp-right">
+          <h3>演示账号</h3>
+          <div class="accounts">
+            <div class="acc"><span class="role">普通用户</span><span class="num">13800000001</span></div>
+            <div class="acc"><span class="role">工作室主</span><span class="num">13800000002</span></div>
+            <div class="acc"><span class="role">平台管理员</span><span class="num">13800000003</span></div>
+          </div>
+          <div style="font-size:11px;color:var(--tertiary);margin-bottom:24px;font-family:'JetBrains Mono',monospace;letter-spacing:.5px">验证码任意 6 位即可</div>
+
+          <h3>评审黄金路径（约 90 秒）</h3>
+          <div class="path">
+            <div class="path-step"><span class="pn">1</span><span>打开 / 看 Hero + 五步链路</span></div>
+            <div class="path-step"><span class="pn">2</span><span>/login 一键登录【演示用户】</span></div>
+            <div class="path-step"><span class="pn">3</span><span>/design 自动注入 prompt → 三方案浮现</span></div>
+            <div class="path-step"><span class="pn">4</span><span>切换 6 釉色 → 微调 → 看版本树</span></div>
+            <div class="path-step"><span class="pn">5</span><span>下单 → 派单可视化 → 印章工单</span></div>
+            <div class="path-step"><span class="pn">6</span><span>2s 后右下角 "师傅已接单" toast</span></div>
+            <div class="path-step"><span class="pn">7</span><span>/orders 看 12 状态时间轴</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:32px;padding:18px 22px;background:var(--bg2);border-left:3px solid var(--accent);border-radius:8px;font-size:13px;color:var(--muted);line-height:1.9">
+        <strong style="color:var(--accent-dark);font-family:'Songti SC',serif;letter-spacing:2px">断网兜底：</strong>URL 加 <code class="mono" style="background:#fff;padding:2px 6px;border-radius:4px;color:var(--accent-dark)">?demo_offline=true</code> 走预生成案例池，全程不依赖任何外部 API。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<div class="footer">
+  <div class="wrap">
+    <div class="seal">陶</div>
+    <div class="name">陶语 · ClayWords</div>
+    <div class="meta">AI 创造力大赛初赛 · 让非遗手艺触手可及</div>
+    <div class="meta" style="margin-top:14px">© 2026 ClayWords · 由 TRAE 协作完成</div>
+  </div>
+</div>
+
+</body>
+</html>
+
+
+
+
+
+

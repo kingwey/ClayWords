@@ -1,0 +1,183 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main, develop]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install lint tools
+        run: |
+          pip install ruff mypy
+
+      - name: Run ruff
+        run: |
+          cd backend
+          ruff check . || true  # 暂时不阻塞 CI
+
+      - name: Run mypy
+        run: |
+          cd backend
+          mypy app --ignore-missing-imports --no-strict-optional || true
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: claywords
+          POSTGRES_PASSWORD: claywords_secret
+          POSTGRES_DB: claywords_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://claywords:claywords_secret@localhost:5432/claywords_test
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Run unit tests with coverage
+        env:
+          DATABASE_URL: postgresql+asyncpg://claywords:claywords_secret@localhost:5432/claywords_test
+          REDIS_URL: redis://localhost:6379
+          CRYPTO_PEPPER: ci_test_pepper
+        run: |
+          cd backend
+          # 默认跑 unit + smoke（conftest.py 会把未显式打标记的用例归入 unit）
+          # 覆盖率门槛 50%（pytest.ini）；后续随测试补齐逐步上调到 70%
+          pytest tests/ -v -m "unit or smoke"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage.xml
+          fail_ci_if_error: false
+
+  migrations-test:
+    name: Migration Smoke Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: claywords
+          POSTGRES_PASSWORD: claywords_secret
+          POSTGRES_DB: claywords_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Test migration up
+        env:
+          DATABASE_URL: postgresql+asyncpg://claywords:claywords_secret@localhost:5432/claywords_test
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Test migration down
+        env:
+          DATABASE_URL: postgresql+asyncpg://claywords:claywords_secret@localhost:5432/claywords_test
+        run: |
+          cd backend
+          alembic downgrade -1
+
+      - name: Test migration up again
+        env:
+          DATABASE_URL: postgresql+asyncpg://claywords:claywords_secret@localhost:5432/claywords_test
+        run: |
+          cd backend
+          alembic upgrade head
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install security tools
+        run: pip install pip-audit safety
+
+      - name: Run pip-audit
+        run: |
+          cd backend
+          pip-audit -r requirements.txt --desc || true
+
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+        continue-on-error: true

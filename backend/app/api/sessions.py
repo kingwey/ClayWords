@@ -2,10 +2,11 @@
 
 import uuid
 from datetime import datetime
+from app.core.time import utcnow
 from typing import Optional, List, Annotated
 
 from fastapi import APIRouter, HTTPException, Depends, status, Body
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
@@ -28,9 +29,7 @@ class SessionResponse(BaseModel):
     title: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MessageResponse(BaseModel):
@@ -39,9 +38,7 @@ class MessageResponse(BaseModel):
     content: str
     design_params: Optional[dict] = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CreateSessionRequest(BaseModel):
@@ -187,6 +184,11 @@ async def send_message(
 
     - `?demo=true`：优先返回案例池中相似度最高的预生成方案，演示用。
     - `?demo_offline=true`：完全离线，跳过 LLM，全部走 fixture。
+
+    Tasks are now persisted to Redis Streams (Phase Q2):
+    - Queued via XADD design.gen
+    - Worker consumes via XREADGROUP
+    - Progress published via Redis Pub/Sub
     """
     # Verify session belongs to user
     result = await session.execute(
@@ -200,9 +202,6 @@ async def send_message(
     if not s:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
-    # Generate task ID for tracking
-    task_id = str(uuid.uuid4())
-
     # Create user message
     user_message = MessageModel(
         id=str(uuid.uuid4()),
@@ -213,7 +212,7 @@ async def send_message(
     session.add(user_message)
 
     # Update session
-    s.updated_at = datetime.utcnow()
+    s.updated_at = utcnow()
     if s.title == "新会话":
         s.title = request.content[:50]
 
@@ -265,7 +264,21 @@ async def send_message(
         )
         session.add(assistant_message)
         await session.flush()
-        return SendMessageResponse(task_id=task_id)
+
+        # Demo mode: still create task for tracking
+        from app.services.tasks.task_service import get_task_service
+        task_service = await get_task_service()
+        task = await task_service.create_task(
+            payload={
+                "session_id": session_id,
+                "user_id": current_user.user_id,
+                "content": request.content,
+                "design_params": user_message.design_params,
+                "demo": True,
+                "demo_offline": demo_offline,
+            }
+        )
+        return SendMessageResponse(task_id=task.task_id)
 
     # ============== 正常分支：调 LLM 解析 ==============
     try:
@@ -301,4 +314,16 @@ async def send_message(
 
     await session.flush()
 
-    return SendMessageResponse(task_id=task_id)
+    # Create task in Redis Streams + Postgres
+    from app.services.tasks.task_service import get_task_service
+    task_service = await get_task_service()
+    task = await task_service.create_task(
+        payload={
+            "session_id": session_id,
+            "user_id": current_user.user_id,
+            "content": request.content,
+            "design_params": user_message.design_params,
+        }
+    )
+
+    return SendMessageResponse(task_id=task.task_id)

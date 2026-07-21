@@ -1,6 +1,6 @@
 /* ============================================================
    ClayWords 陶语 · 视觉设计系统
-   参照设计文档：陶语-报名材料.html / 初赛演示技术方案
+   参照设计文档：taoyu-pitch-doc.html / 初赛演示技术方案 (taoyu-tech-design.md)
    核心色：暖米瓷白背景 · 墨绿主色 · 陶土橙强调色 · 金箔点缀
    ============================================================ */
 
@@ -322,4 +322,15 @@ a:hover {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1) rotate(0deg);
   }
+}
+
+/* ======= 共享布局工具类 =======
+   消除各页面 .filter-bar / .loading-container 的重复 scoped 定义。
+   全局（非 scoped）规则，可命中各页面组件内的同名元素。 */
+.filter-bar {
+  margin-bottom: var(--spacing-5, 20px);
+}
+
+.loading-container {
+  padding: var(--spacing-6, 24px) 0;
 }

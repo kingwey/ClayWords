@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -33,9 +33,7 @@ class OrderResponse(BaseModel):
     shipping_address: str
     created_at: str
     updated_at: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrderListResponse(BaseModel):
@@ -62,9 +60,7 @@ class OrderLogResponse(BaseModel):
     operator: str
     reason: str
     created_at: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.get("", response_model=OrderListResponse)

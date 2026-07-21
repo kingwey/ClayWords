@@ -1,0 +1,230 @@
+# ClayWords Production Values
+# Phase Q10 P0: 生产环境配置
+
+## 全局配置
+global:
+  environment: production
+  domain: claywords.com
+  imagePullPolicy: IfNotPresent
+
+## Backend 服务
+backend:
+  replicaCount: 3
+  image:
+    repository: ghcr.io/claywords/backend
+    tag: "1.0.0"
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  # 水平自动伸缩
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+  # 健康检查
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  # 环境变量（从 Secret 读取）
+  env:
+    ENVIRONMENT: production
+    DEBUG: "False"
+    DATABASE_URL: "postgresql+asyncpg://claywords:$(DATABASE_PASSWORD)@postgres-service:5432/claywords"
+    REDIS_URL: "redis://redis-service:6379"
+    MINIO_ENDPOINT: "minio-service:9000"
+    MINIO_SECURE: "true"
+    CORS_ORIGINS: "https://claywords.com,https://www.claywords.com,https://api.claywords.com"
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+## Worker 服务
+worker:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/claywords/worker
+    tag: "1.0.0"
+
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+  env:
+    ENVIRONMENT: production
+    DATABASE_URL: "postgresql+asyncpg://claywords:$(DATABASE_PASSWORD)@postgres-service:5432/claywords"
+    REDIS_URL: "redis://redis-service:6379"
+
+## PostgreSQL
+postgres:
+  enabled: true
+  image:
+    repository: pgvector/pgvector
+    tag: pg16
+
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: "ssd"
+
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+
+  auth:
+    database: claywords
+    username: claywords
+    # password 通过 Secret 注入
+
+  service:
+    type: ClusterIP
+    port: 5432
+
+## Redis
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "7-alpine"
+
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: "ssd"
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+  # Redis 配置
+  args:
+    - redis-server
+    - --appendonly yes
+    - --appendfsync everysec
+    - --maxmemory 1500mb
+    - --maxmemory-policy allkeys-lru
+
+  service:
+    type: ClusterIP
+    port: 6379
+
+## MinIO
+minio:
+  enabled: true
+  image:
+    repository: minio/minio
+    tag: latest
+
+  persistence:
+    enabled: true
+    size: 200Gi
+    storageClass: "ssd"
+
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+  auth:
+    rootUser: claywords
+    # rootPassword 通过 Secret 注入
+
+  service:
+    type: ClusterIP
+    apiPort: 9000
+    consolePort: 9001
+
+## Ingress
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+
+  hosts:
+    - host: api.claywords.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: backend
+
+  tls:
+    - secretName: claywords-tls
+      hosts:
+        - api.claywords.com
+
+## 监控
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    retention: 15d
+  grafana:
+    enabled: true
+    adminPassword: # 通过 Secret 注入
+
+## 备份
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # 每日 02:00
+  retention: 30  # 保留 30 天
+
+## 安全
+security:
+  networkPolicy:
+    enabled: true
+  podSecurityStandard: restricted
+
+## ConfigMap
+configMap:
+  create: true
+  data:
+    LOG_LEVEL: info
+    WORKERS: "4"
+
+## Secret (引用外部创建的 Secret)
+secret:
+  create: false
+  name: claywords-secrets

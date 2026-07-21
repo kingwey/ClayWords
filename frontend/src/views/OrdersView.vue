@@ -247,9 +247,7 @@ async function fetchOrders() {
     }
 
     const response = await fetch(`/api/v1/orders?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-      }
+      credentials: 'include'  // cookie 自动携带 token
     })
 
     if (!response.ok) throw new Error('Failed to fetch orders')
@@ -383,10 +381,6 @@ onMounted(() => {
 
 .filter-bar :deep(.el-radio-button:first-child .el-radio-button__inner) {
   border-radius: var(--radius-full);
-}
-
-.loading-container {
-  padding: var(--spacing-6);
 }
 
 .empty-state {

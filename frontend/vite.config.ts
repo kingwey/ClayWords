@@ -15,6 +15,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true
+      },
+      // 管理后台指标接口（后端暴露在 /metrics，不在 /api 前缀下）
+      '/metrics': {
+        target: 'http://localhost:8000',
+        changeOrigin: true
       }
     }
   }
