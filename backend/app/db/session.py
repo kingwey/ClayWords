@@ -13,6 +13,19 @@ from app.models.entities import Base
 logger = structlog.get_logger()
 
 
+def _normalize_db_url(url: str) -> str:
+    """规范化数据库 URL 为异步驱动格式。
+
+    Render 的 Postgres connectionString 形如 postgres://... 或 postgresql://...，
+    而 SQLAlchemy 异步引擎需要显式异步驱动 postgresql+asyncpg://...。
+    """
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+    return url
+
+
 # 连接池：默认 5/10 在 SSE 长连接 + 多副本下偏小，参数化后便于按环境调整
 # 同时设置 pool_recycle 防止 PG 服务端 idle 超时杀连接，pool_pre_ping 在网络抖动时校验
 engine = create_async_engine(
