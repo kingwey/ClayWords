@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # CORS 配置
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"  # P0: 生产需覆盖
 
+    # 前端构建产物目录；设置后由后端同源托管（SPA）。Docker 部署时由镜像注入 STATIC_DIR=/app/static
+    STATIC_DIR: str = ""
+
     # Database (默认 Postgres，测试可用 SQLite)
     DATABASE_URL: str = "postgresql+asyncpg://claywords:claywords_secret@localhost:5432/claywords"
     # 连接池：默认 5/10 在 SSE 长连接 + 多副本下偏小
